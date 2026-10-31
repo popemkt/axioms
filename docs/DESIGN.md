@@ -274,3 +274,158 @@ kb in a temp store and temp home.
 | kb outline: a concept with its fields | kb graph: the `needs` relation | axioms, reloaded from kb |
 | --- | --- | --- |
 | ![](media/kb/kb-concept-fields.jpg) | ![](media/kb/kb-graph-needs.jpg) | ![](media/kb/axioms-from-kb.jpg) |
+
+## SpacetimeDB
+
+With `AXIOMS_STORE=spacetime`, the library lives in a SpacetimeDB 2.14.0
+database and every open view is live. A third backend sits beside JSONL and
+kb; both of those keep working unchanged.
+
+**Shape.** The module (`spacetime/`, Rust compiled to wasm32) stores and
+validates. It holds:
+
+| table | rows | key |
+| --- | --- | --- |
+| `concept` | the shared graph's concepts: name, statement, explanation, check, last writer | the core slug |
+| `need` | `from_id` needs `to_id` | `from>to` |
+| `topic` | stated topics, ordered by an auto-increment `seq` (newest highest) | concept |
+| `knowledge` | one person's state of one concept; no row means unknown | `<identity>:<concept>` |
+| `request` | a decomposition asked for: `topic` or `decompose`, then `pending` → `working` → `done`/`failed` | auto id |
+
+It has these reducers:
+
+- `put(concepts, needs, topics)`: an upsert; a need on a missing concept is refused.
+- `mark(concept, state)`: the caller's own knowledge.
+- `request_topic` and `request_decompose`: these dedupe an open request for the same thing.
+- `claim`, `resolve` and `finish`: for workers.
+
+The graph is shared. Knowledge is per identity, so each person has their
+own axioms.
+
+**The maths stays in core.**
+
+- The module does no graph work. It does not even check for cycles; a client
+  reading a cycle-closing need skips it.
+- The *server* is a read model. It mirrors every table (`crates/live`,
+  `Mirror`, self-healing across SpacetimeDB restarts). For
+  `GET /api/topics/{id}?as=<identity>` it builds a `Library` with that
+  person's knowledge and answers with core's view and roadmap, as before.
+- The *worker* runs the learner (merge, dedupe) on the requester's library.
+- The *CLI* uses `SpacetimeStore`.
+
+**Why a worker.** Reducers are deterministic transactions and cannot call
+a model. 2.x does have procedures that may make HTTP calls, but the
+SpacetimeDB docs themselves recommend a sidecar for model calls. A sidecar
+also keeps the provider (here `claude -p` with the host's own sign-in) out
+of the database. The worker runs inside the live server unless
+`AXIOMS_WORKER=0`; `axioms-worker` runs more of them elsewhere. Each worker:
+
+1. watches `request`, claims a pending row (atomic: two workers never both
+   win), and for a topic writes the topic concept at once (`resolve`), so
+   the asker's view opens on it;
+2. decomposes, then writes core's `diff(before, after)` split by
+   `Diff::steps(target)`: one new concept per `put`, with only the needs
+   whose ends exist, growing outward from the target;
+3. calls `finish`.
+
+Every subscribed view redraws per step, so a decomposition visibly grows
+node by node (`AXIOMS_STREAM_MS`, 500 ms on the host, paces the steps).
+
+**Browser.** `web/js/live.js` connects with the SpacetimeDB TypeScript SDK.
+The SDK is bundled once with the generated bindings by esbuild
+(`scripts/web-bundle.sh` → `web/vendor/spacetimedb.js`, committed like dagre;
+the UI itself still has no build step).
+
+- **Reads and writes.** It subscribes to all five tables, writes through
+  reducers as its own identity, and on any change (debounced 120 ms) refetches
+  the blueprint, so the existing renderer and Display options are untouched.
+- **Waiting.** `decompose` and `learn` return when their request finishes,
+  in the same shape as the JSON API; the steps arrive before that.
+- **Pending.** Requests from other devices show as pending nodes.
+- **Identity.** The token is kept in localStorage. The **live** badge copies
+  a device link (`#/device/<token>`) that makes another browser the same
+  person.
+- **Reconnecting.** A dropped connection reloads the page after 5 s.
+
+**`SpacetimeStore`.** The `Store` contract for the CLI.
+
+- `load` is the shared graph with this client's knowledge.
+- `save` writes core's diff: additions and changes only. It never deletes,
+  because one person's older copy must not shrink a shared graph.
+- `axioms import <nodes.jsonl>` brings a JSONL library in.
+- It connects per call on a plain thread, so the caller's async runtime is
+  never blocked in.
+
+**Running it** (shared-server; `scripts/serve-live.sh`, which is also the
+after-reboot restart):
+
+- `axioms-spacetimedb`: a transient systemd unit, standalone on
+  127.0.0.1:4420, with data in `~/.local/share/axioms/spacetime/data`, a
+  512 MiB page pool, `MemoryMax=1G` and `CPUQuota=200%`. It uses about
+  70 MB of RAM idle. It is exposed on :10005 for browsers' websockets.
+- `axioms-live`: axioms-server on 127.0.0.1:4404, exposed on :10004.
+- The binaries are the official 2.14.0 release in user space
+  (`scripts/spacetime-install.sh`). They are glibc-dynamic and run through
+  nix-ld. nixpkgs has only 2.10.1, which is unfree and would build from
+  source on this host.
+- `scripts/spacetime` is the pinned CLI with its own config file.
+- Module, SDK crate and npm package are pinned to the same 2.14.0.
+- Systemd units, not `setsid`, because a bb daemon restart kills processes
+  started from a thread.
+
+**Verified** (screenshots below):
+
+- **Sync.** A phone-sized page marking a concept known redrew the desktop
+  page at once.
+- **Pending.** A decomposition asked for on the phone showed as pending on
+  the desktop.
+- **Streaming.** A topic stated on the phone streamed into both views about
+  every 500 ms.
+- **Persistence.** Restarting SpacetimeDB kept every concept and mark. The
+  server's mirror reconnected in 2 s, and the pages reloaded themselves.
+
+**Trade-offs against JSONL and kb.**
+
+| | JSONL | kb | SpacetimeDB |
+| --- | --- | --- | --- |
+| Live across devices | no (reload) | no (axioms reads kb at start) | yes, pushed to every view |
+| People | one | one | many: shared graph, knowledge per identity |
+| Writes | the whole file, atomically | a diff through kb's actions | a diff through reducers, per transaction |
+| Running cost | none | the `kb` binary per save | a server process (~70 MB) and a port |
+| Where the data can be seen and edited | any editor, git | kb's outline and graph, with your own notes | the axioms UI, `spacetime sql` |
+| Deletes | yes | yes (reparenting) | no (the graph only grows) |
+| Schema change | free | free | `spacetime publish`; a breaking change needs `-c` (wipes) or a migration |
+| Licence | ours | kb's | BSL 1.1 (server; the SDK's npm metadata says ISC) |
+
+JSONL stays the simplest and most portable; kb is where the concepts meet
+the owner's own notes; SpacetimeDB is the one that makes axioms
+multiplayer and live, at the price of a running server and a young,
+fast-moving API (weekly minor releases, 2.x renamed core APIs).
+
+**Known limits.**
+
+- **No authentication beyond the tailnet.** Anyone who can reach :10005 can
+  call reducers. Identities are anonymous tokens, and a device link carries
+  one (it is a bearer secret).
+- **Knowledge is a public table.** Each person sees only their own in the
+  UI, but the rows are readable. A private table plus a per-sender view
+  would hide them.
+- **Imported knowledge belongs to the CLI identity.** Knowledge brought in
+  with `import` is the CLI identity's (`axioms-cli`), not a browser's.
+- **Re-stating a topic does not move it to the top.** Topics are inserted
+  once.
+- **Views refetch in full.** A view refetches its whole blueprint per
+  (debounced) change. That is fine at hundreds of concepts; at many
+  thousands, core would want to run in the browser (it is pure, so it
+  could be compiled to wasm).
+
+| Phone marks a concept known… | …and the desktop redraws, no reload |
+| --- | --- |
+| ![](media/spacetime/phone-marked.jpg) | ![](media/spacetime/desktop-synced.jpg) |
+
+| A topic stated on the phone streams into the desktop… | …and the phone… | …step by step… | …to the finished blueprint |
+| --- | --- | --- | --- |
+| ![](media/spacetime/stream-1-desktop.jpg) | ![](media/spacetime/stream-2-phone.jpg) | ![](media/spacetime/stream-3-desktop.jpg) | ![](media/spacetime/stream-4-done.jpg) |
+
+Also: [a decomposition requested on the phone, pending on the desktop](media/spacetime/desktop-pending-from-phone.jpg),
+and [the desktop after a SpacetimeDB restart](media/spacetime/after-restart.jpg).

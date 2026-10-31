@@ -109,6 +109,25 @@ answered on :8317), so the default is the `claude -p` subprocess. To point
 axioms at it later:
 `AXIOMS_PROVIDER=openai AXIOMS_OPENAI_BASE_URL=http://popemkt-work:8317/v1 AXIOMS_MODEL=… scripts/serve.sh`.
 
+## Live mode (SpacetimeDB)
+
+With `AXIOMS_STORE=spacetime` the library lives in SpacetimeDB and every
+open view is live. Mark a concept known on your phone and the laptop
+redraws at once. Ask for a decomposition anywhere and it grows node by node
+in every view. Each browser is its own person (an identity kept in
+localStorage). The graph is shared; what you know is yours. Click the
+**live** badge to copy a link that makes another device you.
+
+```sh
+scripts/spacetime-install.sh   # SpacetimeDB 2.14.0 in ~/.local/share/axioms/spacetime
+scripts/serve-live.sh          # SpacetimeDB + live server as systemd units, on :10004/:10005
+scripts/spacetime publish -s axioms axioms --module-path spacetime -y   # after module changes
+AXIOMS_STORE=spacetime axioms import ~/.local/share/axioms/nodes.jsonl  # bring a JSONL library in
+```
+
+`scripts/serve-live.sh` is also the restart after a reboot. See
+[DESIGN.md → SpacetimeDB](docs/DESIGN.md#spacetimedb).
+
 ## Architecture
 
 A Cargo workspace of small crates. Each file has one purpose and stays under
@@ -120,12 +139,14 @@ about 200 lines.
 | `store` | the `Store` trait. `JsonlStore` and `MemoryStore` both go through one codec into kb-style nodes (everything is a node, edges are ref props). |
 | `agent` | the `ModelProvider` trait (`ClaudeCli`, `RigOpenAi`), the `ConceptSource` trait (`LlmSource`, `ScriptedSource`), the prompt contracts, and the `Learner` loop. |
 | `server` | `axum`: the JSON API under `/api`, and the static UI from `web/`. |
-| `cli` | `clap`: `axioms learn/show/decompose/mark/topics`. |
+| `live` | SpacetimeDB clients: the server's self-healing `Mirror`, the decompose `worker` (also `axioms-worker`), and `SpacetimeStore`. Its `bindings/` are generated. |
+| `cli` | `clap`: `axioms learn/show/decompose/mark/topics/import`. |
+| `spacetime/` | the SpacetimeDB module (wasm32, outside the workspace): tables and reducers. `spacetime/web/` bundles the TS SDK for the UI. |
 | `web/` | vanilla ES modules with no build step. An SVG renderer of its own, with layouts in `web/js/layout/` and drawing in `web/js/render/`. dagre 3.1.3 (MIT) is vendored in `web/vendor/`. |
 
 The design is in [docs/DESIGN.md](docs/DESIGN.md): the graph model, the
-decomposition prompt contract, the roadmap algorithm, dedupe, and the open
-question of a link to kb.
+decomposition prompt contract, the roadmap algorithm, dedupe, the kb store,
+and live mode on SpacetimeDB.
 
 ### Deviations from the brief
 
@@ -149,3 +170,8 @@ The captures in `docs/media/reference/` are kept **for study only**. They are
 not shipped with the app, and their copyright stays with their owners. The
 display options mirror the graph lens of [kb](https://github.com/popemkt/kb)
 without sharing its code.
+
+Live mode bundles the [SpacetimeDB](https://github.com/clockworklabs/SpacetimeDB)
+TypeScript SDK 2.14.0 into `web/vendor/spacetimedb.js`. Its npm metadata says
+ISC; the repository's licence, vendored as `web/vendor/LICENSE.spacetimedb`,
+is the Business Source License 1.1.

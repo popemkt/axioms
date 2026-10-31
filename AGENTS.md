@@ -29,5 +29,13 @@ they are linked here rather than restated:
 - Host (shared-server): build with `CARGO_BUILD_JOBS=4`. Never restart app-bb
   or app-bb-daemon, and never touch the kb trial on :10000. axioms serves on
   :10001.
+- The SpacetimeDB module (`spacetime/`) is its own wasm32 crate outside the
+  workspace; the gate lints it too. After changing its tables or reducers:
+  `scripts/spacetime publish …`, regenerate `crates/live/src/bindings`
+  (`scripts/spacetime generate --lang rust …`) and run `scripts/web-bundle.sh`.
+  Live SpacetimeDB tests need the `axioms-test` database (see
+  `crates/live/tests/store.rs`).
+- Long-lived processes on the host run as transient systemd units
+  (`scripts/serve-live.sh`), never `setsid`: a bb daemon restart kills those.
 - Live model tests are `#[ignore]`d. Run them with
   `cargo test -p axioms-agent -- --ignored`.
