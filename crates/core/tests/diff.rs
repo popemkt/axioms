@@ -66,3 +66,19 @@ fn steps_grow_outward_from_the_root_without_dangling_edges() {
     }
     assert_eq!(needs, d.needs.len());
 }
+
+#[test]
+fn absorb_takes_concepts_needs_and_topics() {
+    let mut mine = lib(&[("goal", "a")]);
+    let mut theirs = lib(&[("other", "a"), ("a", "b")]);
+    theirs.topics = vec![id("other")];
+    set(&mut theirs.graph, "b", Knowledge::Known);
+    assert_eq!(mine.absorb(theirs), 0);
+    assert_eq!(mine.graph.len(), 4);
+    assert_eq!(mine.topics, [id("goal"), id("other")]);
+    assert_eq!(
+        mine.graph.get(&id("b")).unwrap().knowledge,
+        Knowledge::Known
+    );
+    assert!(diff(&mine, &mine.clone()).is_empty());
+}

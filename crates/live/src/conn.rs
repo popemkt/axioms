@@ -5,7 +5,8 @@
 use crate::bindings::DbConnection;
 use anyhow::Context;
 use spacetimedb_sdk::{DbContext, Identity, credentials};
-use std::sync::mpsc;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, mpsc};
 use std::time::Duration;
 
 /// Where the database is and who this client is.
@@ -43,6 +44,8 @@ const TABLES: [&str; 5] = [
 pub struct Live {
     pub conn: DbConnection,
     pub me: Identity,
+    /// Set when we close the connection ourselves, so it is not "lost".
+    closing: Arc<AtomicBool>,
 }
 
 /// Connect and wait until the subscription is applied (the cache is full).
@@ -55,6 +58,8 @@ pub fn connect(cfg: &Config, on_lost: impl FnOnce() + Send + 'static) -> anyhow:
     let (tx, rx) = mpsc::channel::<Result<(), String>>();
     let failed = tx.clone();
     let creds = cfg.creds.clone();
+    let closing = Arc::new(AtomicBool::new(false));
+    let ours = closing.clone();
     let conn = DbConnection::builder()
         .with_uri(cfg.uri.as_str())
         .with_database_name(cfg.db.clone())
@@ -77,8 +82,10 @@ pub fn connect(cfg: &Config, on_lost: impl FnOnce() + Send + 'static) -> anyhow:
             let _ = failed.send(Err(e.to_string()));
         })
         .on_disconnect(move |_, e| {
-            tracing::warn!(?e, "spacetimedb connection lost");
-            on_lost();
+            if !ours.load(Ordering::SeqCst) {
+                tracing::warn!(?e, "spacetimedb connection lost");
+                on_lost();
+            }
         })
         .build()
         .with_context(|| format!("connecting to spacetimedb at {} ({})", cfg.uri, cfg.db))?;
@@ -89,11 +96,12 @@ pub fn connect(cfg: &Config, on_lost: impl FnOnce() + Send + 'static) -> anyhow:
         Err(_) => anyhow::bail!("spacetimedb at {} did not answer in 20 s", cfg.uri),
     }
     let me = conn.identity();
-    Ok(Live { conn, me })
+    Ok(Live { conn, me, closing })
 }
 
 impl Drop for Live {
     fn drop(&mut self) {
+        self.closing.store(true, Ordering::SeqCst);
         let _ = self.conn.disconnect();
     }
 }

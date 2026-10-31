@@ -10,6 +10,9 @@ button { font: inherit; cursor: pointer; }
 .muted { color: var(--muted); font-weight: 400; font-size: .85em; }
 
 header { display: flex; gap: 10px; align-items: center; padding: 10px 14px; background: var(--panel); border-bottom: 1px solid var(--line); }
+#live { cursor: pointer; font-size: .72em; font-weight: 600; color: #3f7a4a; display: inline-flex; align-items: center; gap: 4px; }
+#live::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #4caf64; box-shadow: 0 0 0 3px #4caf6433; }
+#live.lost { color: var(--muted); } #live.lost::before { background: #c9a227; box-shadow: none; }
 .brand { font-weight: 800; color: var(--brand); text-decoration: none; letter-spacing: .02em; }
 #learn { flex: 1; display: flex; gap: 6px; min-width: 0; }
 #topic { flex: 1; min-width: 0; padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px; font: inherit; }

@@ -65,11 +65,13 @@ pub fn put(
             });
         }
     }
-    for t in topics {
+    // Topics come most recent first; the last inserted gets the highest seq.
+    for t in topics.into_iter().rev() {
         check(exists(&t), "a topic that is no concept")?;
         if ctx.db.topic().concept().find(&t).is_none() {
             ctx.db.topic().insert(Topic {
                 concept: t,
+                seq: 0,
                 by: ctx.sender(),
                 at: ctx.timestamp,
             });

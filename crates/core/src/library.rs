@@ -33,4 +33,25 @@ impl Library {
         self.topics.retain(|t| t != id);
         self.graph.remove_isolated(id);
     }
+
+    /// Take in another library: its concepts (theirs win), the needs that
+    /// fit (one that would close a cycle here is skipped), and its topics
+    /// after ours. Answers how many needs were skipped.
+    pub fn absorb(&mut self, other: Library) -> usize {
+        for c in other.graph.concepts() {
+            self.graph.upsert(c.clone());
+        }
+        let skipped = other
+            .graph
+            .edges()
+            .into_iter()
+            .filter(|(f, t)| self.graph.add_need(f, t).is_err())
+            .count();
+        for t in other.topics {
+            if !self.topics.contains(&t) {
+                self.topics.push(t);
+            }
+        }
+        skipped
+    }
 }

@@ -41,7 +41,7 @@ pub fn library(live: &Live, person: Option<Identity>) -> Library {
         }
     }
     let mut topics: Vec<Topic> = db.topic().iter().collect();
-    topics.sort_by_key(|t| std::cmp::Reverse(t.at));
+    topics.sort_by_key(|t| std::cmp::Reverse(t.seq));
     lib.topics = topics.into_iter().map(|t| ConceptId(t.concept)).collect();
     lib
 }

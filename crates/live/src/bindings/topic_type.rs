@@ -8,6 +8,7 @@ use spacetimedb_sdk::__codegen::{self as __sdk, __lib, __sats, __ws};
 #[sats(crate = __lib)]
 pub struct Topic {
     pub concept: String,
+    pub seq: u64,
     pub by: __sdk::Identity,
     pub at: __sdk::Timestamp,
 }
@@ -21,6 +22,7 @@ impl __sdk::InModule for Topic {
 /// Provides typed access to columns for query building.
 pub struct TopicCols {
     pub concept: __sdk::__query_builder::Col<Topic, String>,
+    pub seq: __sdk::__query_builder::Col<Topic, u64>,
     pub by: __sdk::__query_builder::Col<Topic, __sdk::Identity>,
     pub at: __sdk::__query_builder::Col<Topic, __sdk::Timestamp>,
 }
@@ -30,6 +32,7 @@ impl __sdk::__query_builder::HasCols for Topic {
     fn cols(table_name: &'static str) -> Self::Cols {
         TopicCols {
             concept: __sdk::__query_builder::Col::new(table_name, "concept"),
+            seq: __sdk::__query_builder::Col::new(table_name, "seq"),
             by: __sdk::__query_builder::Col::new(table_name, "by"),
             at: __sdk::__query_builder::Col::new(table_name, "at"),
         }
@@ -41,6 +44,7 @@ impl __sdk::__query_builder::HasCols for Topic {
 /// Provides typed access to indexed columns for query building.
 pub struct TopicIxCols {
     pub concept: __sdk::__query_builder::IxCol<Topic, String>,
+    pub seq: __sdk::__query_builder::IxCol<Topic, u64>,
 }
 
 impl __sdk::__query_builder::HasIxCols for Topic {
@@ -48,6 +52,7 @@ impl __sdk::__query_builder::HasIxCols for Topic {
     fn ix_cols(table_name: &'static str) -> Self::IxCols {
         TopicIxCols {
             concept: __sdk::__query_builder::IxCol::new(table_name, "concept"),
+            seq: __sdk::__query_builder::IxCol::new(table_name, "seq"),
         }
     }
 }

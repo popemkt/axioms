@@ -15,7 +15,8 @@ use std::sync::{Arc, Mutex};
 #[command(version, about = "Learn any topic starting from what you already know")]
 struct Cli {
     /// The library file (kb-style JSONL nodes). With AXIOMS_STORE=kb the
-    /// library is kept in the kb store at AXIOMS_KB_ROOT instead.
+    /// library is kept in the kb store at AXIOMS_KB_ROOT instead; with
+    /// AXIOMS_STORE=spacetime, in SpacetimeDB (AXIOMS_STDB_URI).
     #[arg(long, env = "AXIOMS_DATA", default_value_os_t = axioms_store::default_path())]
     data: PathBuf,
     #[command(subcommand)]
@@ -43,6 +44,9 @@ enum Command {
     },
     /// List stated topics, most recent first.
     Topics,
+    /// Take a JSONL library (another machine's, or the file before moving
+    /// to kb or SpacetimeDB) into the current store.
+    Import { from: PathBuf },
 }
 
 fn parse_knowledge(s: &str) -> Result<Knowledge, String> {
@@ -57,11 +61,13 @@ fn parse_knowledge(s: &str) -> Result<Knowledge, String> {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
-        .with_env_filter(std::env::var("RUST_LOG").unwrap_or_else(|_| "warn".into()))
+        .with_env_filter(
+            std::env::var("RUST_LOG").unwrap_or_else(|_| "warn,spacetimedb_sdk=error".into()),
+        )
         .with_writer(std::io::stderr)
         .init();
     let cli = Cli::parse();
-    let store = axioms_store::open(cli.data.clone())?;
+    let store = axioms_live::open_store(cli.data.clone(), "cli")?;
     let lib = Mutex::new(store.load()?);
     let learner = || -> anyhow::Result<Learner> {
         Ok(Learner::new(Arc::new(
@@ -92,6 +98,16 @@ async fn main() -> anyhow::Result<()> {
                 let id = find(&l, name)?;
                 l.graph.get_mut(&id).expect("found").knowledge = knowledge;
             }
+            None
+        }
+        Command::Import { from } => {
+            let other = axioms_store::Store::load(&axioms_store::JsonlStore::new(&from))?;
+            let n = other.graph.len();
+            let skipped = lib.lock().unwrap().absorb(other);
+            eprintln!(
+                "imported {n} concepts from {} ({skipped} needs skipped)",
+                from.display()
+            );
             None
         }
         Command::Topics => {

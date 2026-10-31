@@ -1,0 +1,8 @@
+{
+  "name": "axioms-web-live",
+  "private": true,
+  "description": "Bundles the SpacetimeDB TypeScript SDK with axioms' generated bindings into web/vendor/spacetimedb.js (scripts/web-bundle.sh)",
+  "dependencies": {
+    "spacetimedb": "2.14.0"
+  }
+}

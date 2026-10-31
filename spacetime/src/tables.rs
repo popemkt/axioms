@@ -27,11 +27,15 @@ pub struct Need {
     pub to_id: String,
 }
 
-/// A stated topic: a concept someone set out to learn.
+/// A stated topic: a concept someone set out to learn. `seq` orders them:
+/// the most recently stated is the highest.
 #[table(accessor = topic, public)]
 pub struct Topic {
     #[primary_key]
     pub concept: String,
+    #[unique]
+    #[auto_inc]
+    pub seq: u64,
     pub by: Identity,
     pub at: Timestamp,
 }

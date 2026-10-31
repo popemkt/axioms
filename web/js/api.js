@@ -14,7 +14,9 @@ async function call(method, path, body) {
 
 export const meta = () => call("GET", "/api/meta");
 export const topics = () => call("GET", "/api/topics");
-export const blueprint = (id) => call("GET", `/api/topics/${encodeURIComponent(id)}`);
+// `as`: in live mode, the identity whose knowledge the view shows.
+export const blueprint = (id, as) =>
+  call("GET", `/api/topics/${encodeURIComponent(id)}${as ? `?as=${as}` : ""}`);
 export const learn = (topic) => call("POST", "/api/topics", { topic });
 export const setKnowledge = (id, knowledge, goal) =>
   call("POST", `/api/concepts/${encodeURIComponent(id)}/knowledge`, { knowledge, goal });

@@ -1,9 +1,10 @@
 //! The JSON API. Every call that changes the library saves it and answers
 //! with the goal's fresh [`Blueprint`].
 
-use crate::state::{ApiError, AppState, Blueprint};
+use crate::state::{ApiError, AppState, Blueprint, blueprint};
 use axioms_core::{ConceptId, Knowledge};
-use axum::extract::{Path, State};
+use axioms_live::Identity;
+use axum::extract::{Path, Query, State};
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
@@ -27,20 +28,51 @@ struct Meta {
     provider: String,
     concepts: usize,
     known: usize,
+    /// Present when the library lives in SpacetimeDB: where the browser
+    /// connects to subscribe and call reducers.
+    live: Option<LiveMeta>,
 }
 
-async fn meta(State(s): St) -> Json<Meta> {
-    let lib = s.lib();
+#[derive(Serialize)]
+struct LiveMeta {
+    uri: String,
+    db: String,
+}
+
+/// Whose knowledge a read shows (`?as=<identity hex>`, live mode only).
+#[derive(Deserialize)]
+struct As {
+    #[serde(rename = "as")]
+    who: Option<String>,
+}
+
+impl As {
+    fn identity(&self) -> Result<Option<Identity>, ApiError> {
+        self.who
+            .as_deref()
+            .filter(|w| !w.is_empty())
+            .map(|w| Identity::from_hex(w).map_err(|_| ApiError::bad_request("bad identity")))
+            .transpose()
+    }
+}
+
+async fn meta(State(s): St, Query(q): Query<As>) -> Api<Meta> {
+    let lib = s.read(q.identity()?)?;
     let known = lib
         .graph
         .concepts()
         .filter(|c| c.knowledge == Knowledge::Known)
         .count();
-    Json(Meta {
+    let live = s.live.as_ref().map(|l| LiveMeta {
+        uri: l.public_uri.clone(),
+        db: l.db.clone(),
+    });
+    Ok(Json(Meta {
         provider: s.learner.label(),
         concepts: lib.graph.len(),
         known,
-    })
+        live,
+    }))
 }
 
 #[derive(Serialize)]
@@ -49,8 +81,8 @@ struct TopicRef {
     name: String,
 }
 
-async fn topics(State(s): St) -> Json<Vec<TopicRef>> {
-    let lib = s.lib();
+async fn topics(State(s): St) -> Api<Vec<TopicRef>> {
+    let lib = s.read(None)?;
     let refs = lib
         .topics
         .iter()
@@ -59,11 +91,12 @@ async fn topics(State(s): St) -> Json<Vec<TopicRef>> {
             id: c.id.clone(),
             name: c.name.clone(),
         });
-    Json(refs.collect())
+    Ok(Json(refs.collect()))
 }
 
-async fn topic(State(s): St, Path(id): Path<String>) -> Api<Blueprint> {
-    Ok(Json(s.blueprint(&ConceptId(id))?))
+async fn topic(State(s): St, Path(id): Path<String>, Query(q): Query<As>) -> Api<Blueprint> {
+    let lib = s.read(q.identity()?)?;
+    Ok(Json(blueprint(&lib, &ConceptId(id))?))
 }
 
 #[derive(Deserialize)]
@@ -78,6 +111,7 @@ fn two() -> u8 {
 }
 
 async fn learn(State(s): St, Json(body): Json<LearnBody>) -> Api<Blueprint> {
+    s.local()?;
     let topic = body.topic.trim();
     if topic.is_empty() || topic.len() > 200 {
         return Err(ApiError::bad_request(
@@ -104,6 +138,7 @@ async fn set_knowledge(
     Path(id): Path<String>,
     Json(b): Json<KnowledgeBody>,
 ) -> Api<Blueprint> {
+    s.local()?;
     let id = ConceptId(id);
     {
         let mut lib = s.lib();
@@ -130,6 +165,7 @@ async fn decompose(
     Path(id): Path<String>,
     Json(b): Json<DecomposeBody>,
 ) -> Api<Blueprint> {
+    s.local()?;
     let id = ConceptId(id);
     for c in [&id, &b.goal] {
         if s.lib().graph.get(c).is_none() {

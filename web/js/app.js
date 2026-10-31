@@ -6,9 +6,18 @@ import { createGraph } from "./graph.js";
 import { createPanel } from "./panel.js";
 import { createSettings } from "./settings.js";
 import { createDisplay } from "./display.js";
+import { connectLive } from "./live.js";
 
 const $ = (id) => document.getElementById(id);
 const state = { goal: null, bp: null, nodes: new Map(), selected: null, pending: new Set(), provider: "" };
+// Where reads and writes go: the JSON API, or SpacetimeDB in live mode
+// (same shapes, see live.js).
+let backend = {
+  blueprint: (id) => api.blueprint(id),
+  setKnowledge: api.setKnowledge,
+  decompose: api.decompose,
+  learn: (topic) => api.learn(topic),
+};
 
 const settings = createSettings();
 const graph = createGraph($("graph"), { settings, onSelect: select });
@@ -16,7 +25,7 @@ const display = createDisplay($("display"), settings, { onReplay: () => graph.re
 const panel = createPanel(
   { card: $("card"), roadmap: $("roadmap") },
   {
-    onKnowledge: (id, k) => run(() => api.setKnowledge(id, k, state.goal)),
+    onKnowledge: (id, k) => run(() => backend.setKnowledge(id, k, state.goal)),
     onDecompose: decompose,
     onSelect: (id) => select(id, true),
     onClose: () => select(null),
@@ -84,7 +93,7 @@ async function decompose(id) {
   busy(`Decomposing “${state.nodes.get(id)?.name}” with ${state.provider}…`);
   const goal = state.goal;
   try {
-    const bp = await api.decompose(id, goal);
+    const bp = await backend.decompose(id, goal);
     if (state.goal === goal) show(bp);
   } catch (e) {
     toast(e.message);
@@ -100,7 +109,7 @@ async function learn(topic) {
   busy(`Decomposing “${topic}” two levels deep with ${state.provider}… (about 30–60 s)`);
   $("topic").value = topic;
   try {
-    const bp = await api.learn(topic);
+    const bp = await backend.learn(topic, (id) => open(id));
     state.selected = null;
     graph.clear();
     show(bp);
@@ -115,7 +124,7 @@ async function learn(topic) {
 async function open(id) {
   const ticket = (open.ticket = (open.ticket || 0) + 1);
   try {
-    const bp = await api.blueprint(id);
+    const bp = await backend.blueprint(id);
     if (ticket !== open.ticket) return;
     if (id !== state.goal) {
       graph.clear();
@@ -157,9 +166,40 @@ function route() {
   if (id && id !== state.goal) open(id);
 }
 
+// Live: redraw on any change, and show every device's pending requests.
+async function goLive(info) {
+  const badge = $("live");
+  backend = await connectLive(info, {
+    onChange: () => {
+      if (state.goal) run(() => backend.blueprint(state.goal));
+      refreshTopics();
+    },
+    onPending: (ids) => {
+      for (const id of state.nodes.keys()) graph.pending(id, ids.has(id) || state.pending.has(id));
+      if (!state.pending.size) busy(ids.size ? `Decomposing ${ids.size} concept(s), live…` : "");
+    },
+    // Reconnect by reloading (the hash keeps the goal); a failed reconnect
+    // shows its error rather than looping.
+    onLost: () => {
+      badge.classList.add("lost");
+      badge.textContent = "reconnecting…";
+      setTimeout(() => location.reload(), 5000);
+    },
+  });
+  badge.hidden = false;
+  badge.title = `Live as ${backend.identity().slice(0, 12)}… Click to copy a link that makes another device you.`;
+  badge.onclick = () =>
+    navigator.clipboard
+      .writeText(backend.deviceLink())
+      .then(() => toast("Device link copied: open it on your other device to be you there."))
+      .catch(() => prompt("Open this link on your other device:", backend.deviceLink()));
+}
+
 (async () => {
   try {
-    state.provider = (await api.meta()).provider;
+    const meta = await api.meta();
+    state.provider = meta.provider;
+    if (meta.live) await goLive(meta.live);
   } catch (e) {
     toast(e.message);
   }
