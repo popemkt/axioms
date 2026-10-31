@@ -21,9 +21,9 @@ ids, orthogonal edges into a clay goal) and the **radial** growth video.
 | ![FLT blueprint figure](docs/media/reference/dag.png) | ![Attention, blueprint layout](docs/media/after/desktop-blueprint-attention.jpg) |
 | ![FLT video, day 11](docs/media/reference/video-day11.jpg) | ![Attention, radial layout with the Display panel](docs/media/after/desktop-radial-display.jpg) |
 
-| FLT blueprint | Growth replay | Phone | Before (v0) |
+| FLT blueprint | After decomposing a leaf | Phone | Before (v0) |
 |---|---|---|---|
-| ![](docs/media/after/desktop-blueprint-flt.jpg) | ![](docs/media/after/growth-2.jpg) | ![](docs/media/after/phone-blueprint.jpg) | ![](docs/media/before/desktop.jpg) |
+| ![](docs/media/after/desktop-blueprint-flt.jpg) | ![](docs/media/after/decomposed.jpg) | ![](docs/media/after/phone-blueprint.jpg) | ![](docs/media/before/desktop.jpg) |
 
 ## Use it
 
