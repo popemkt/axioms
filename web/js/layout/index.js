@@ -1,5 +1,5 @@
 // Layout by name. Every layout takes the drawing model and returns
-// { kind: "boxes" | "dots", pos, routes, sections, labels, parent? }.
+// { kind: "boxes" | "dots", pos, routes, sections, parent? }.
 
 import { blueprint } from "./blueprint.js";
 import { force } from "./force.js";

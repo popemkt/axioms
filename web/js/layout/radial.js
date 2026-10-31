@@ -59,12 +59,5 @@ export function radial(model) {
     const r = m.id === model.goal ? 0 : lvl(m.id) * ring;
     pos.set(m.id, { x: r * Math.cos(angle.get(m.id)), y: r * Math.sin(angle.get(m.id)), r, a: angle.get(m.id) });
   }
-  const outer = Math.max(...[...pos.values()].map((p) => p.r)) + 70;
-  const labels = model.sections
-    .filter((s) => angle.has(s.id))
-    .map((s) => {
-      const a = angle.get(s.id);
-      return { id: s.id, text: s.name, hue: s.hue, x: outer * Math.cos(a), y: outer * Math.sin(a), anchor: Math.cos(a) >= 0 ? "start" : "end" };
-    });
-  return { kind: "dots", pos, routes: new Map(), sections: [], labels, parent };
+  return { kind: "dots", pos, routes: new Map(), sections: [], parent };
 }

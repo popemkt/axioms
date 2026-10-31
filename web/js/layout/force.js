@@ -41,5 +41,5 @@ export function force(model) {
     }
   }
   for (const q of p.values()) delete q.r, delete q.a; // polar coordinates no longer hold
-  return { kind: "dots", pos: p, routes: new Map(), sections: [], labels: [], parent: base.parent };
+  return { kind: "dots", pos: p, routes: new Map(), sections: [], parent: base.parent };
 }

@@ -1,5 +1,5 @@
 // One concept's SVG: a blueprint box (sans title over a monospace id, as in
-// the FLT figure) or a dot with an outward label (as in the FLT video).
+// the FLT figure) or a dot (as in the FLT video).
 // State sits on top of the hue: the goal is clay, a section's key concept is
 // tinted, learning gets a gold mark, known is dimmed with a ✓, and a concept
 // not yet decomposed has a dashed outline.
@@ -47,30 +47,20 @@ function box(g, m, L) {
   mono.textContent = m.id.length > 30 ? `${m.id.slice(0, 29)}…` : m.id;
 }
 
-function dot(g, m, L, p) {
+function dot(g, m, L) {
   const r = dotRadius(m);
   el("circle", { class: "ring", r: r + 5 }, g);
   el("circle", {
     class: "shape", r, fill: m.n.status === "known" ? m.hue : L.fill, stroke: L.stroke,
     "stroke-width": Math.min(L.width, 2), "stroke-dasharray": L.dashed ? "2.5 2" : "none",
   }, g);
-  if (!m.labelled) return;
-  const goal = m.n.status === "goal";
-  const len = Math.hypot(p.x, p.y) || 1;
-  const out = goal ? { x: 0, y: r + 16 } : { x: (p.x / len) * (r + 6), y: (p.y / len) * (r + 6) + 4 };
-  const t = el("text", {
-    class: "title", x: out.x, y: out.y, fill: INK,
-    "text-anchor": goal ? "middle" : p.x >= 0 ? "start" : "end",
-    style: `font:${m.font}`, "paint-order": "stroke", stroke: "#faf9f5", "stroke-width": 4,
-  }, g);
-  t.textContent = (m.n.status === "known" ? "✓ " : "") + m.n.name;
 }
 
-/** Build the node's SVG group for model `m` in layout `kind` at final position `p`. */
-export function drawNode(m, kind, p, ui, knownMode) {
+/** Build the node's SVG group for model `m` in layout `kind`. (Dot labels are placed by labels.js.) */
+export function drawNode(m, kind, ui, knownMode) {
   const g = el("g", { class: "node", "data-id": m.id });
   const L = look(m);
-  (kind === "boxes" ? box : dot)(g, m, L, p);
+  (kind === "boxes" ? box : dot)(g, m, L);
   if (m.n.status === "learning") {
     const at = kind === "boxes" ? { cx: m.w / 2 - 9, cy: -m.h / 2 + 9 } : { cx: dotRadius(m), cy: -dotRadius(m) };
     el("circle", { class: "badge", ...at, r: 4, fill: "#d4a12a", stroke: "#fff", "stroke-width": 1.5 }, g);

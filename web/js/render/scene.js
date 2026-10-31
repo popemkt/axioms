@@ -5,8 +5,10 @@
 
 import { el, drawNode, dotRadius } from "./nodes.js";
 import { drawSections } from "./sections.js";
+import { drawLabels } from "./labels.js";
 import { edgePath, isCrossLink } from "./paths.js";
 import { panzoom } from "./panzoom.js";
+import { measure } from "../model.js";
 
 const MOVE = 650;
 const STAGGER = 55;
@@ -17,7 +19,7 @@ export function createScene(svg, { onSelect, onHover }) {
   const marker = el("marker", { id: "arrow", viewBox: "0 0 10 10", refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: "auto" }, defs);
   el("path", { d: "M0,1 L9,5 L0,9 z", fill: "#5f5d57" }, marker);
   const viewport = el("g", {}, svg);
-  const layers = Object.fromEntries(["sections", "edges", "nodes"].map((k) => [k, el("g", { class: k }, viewport)]));
+  const layers = Object.fromEntries(["sections", "edges", "nodes", "labels"].map((k) => [k, el("g", { class: k }, viewport)]));
   const pz = panzoom(svg, viewport);
   let shown = new Map(); // id → { g, x, y }
   let frame = 0;
@@ -25,21 +27,24 @@ export function createScene(svg, { onSelect, onHover }) {
 
   svg.addEventListener("click", (e) => {
     if (pz.dragged()) return;
-    onSelect(e.target.closest(".node")?.dataset.id ?? null);
+    onSelect(e.target.closest(".node, .label")?.dataset.id ?? null);
   });
-  svg.addEventListener("pointerover", (e) => onHover(e.target.closest(".node")?.dataset.id ?? null, e));
-  svg.addEventListener("pointerout", (e) => !e.relatedTarget?.closest?.(".node") && onHover(null, e));
+  svg.addEventListener("pointerover", (e) => onHover(e.target.closest(".node, .label")?.dataset.id ?? null, e));
+  svg.addEventListener("pointerout", (e) => !e.relatedTarget?.closest?.(".node, .label") && onHover(null, e));
 
   function bounds(model, layout) {
     let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
     const grow = (a, b, c, d) => ((x1 = Math.min(x1, a)), (y1 = Math.min(y1, b)), (x2 = Math.max(x2, c)), (y2 = Math.max(y2, d)));
     for (const m of model.nodes) {
       const p = layout.pos.get(m.id);
-      const [w, h] = layout.kind === "boxes" ? [m.w / 2, m.h / 2] : [m.labelled ? 90 : 12, 14];
-      grow(p.x - w, p.y - h, p.x + w, p.y + h);
+      if (layout.kind === "boxes") grow(p.x - m.w / 2, p.y - m.h / 2, p.x + m.w / 2, p.y + m.h / 2);
+      else {
+        // A dot's label sits outward (sideways from the centre): count its width there.
+        const w = m.labelled ? measure(`✓ ${m.n.name}`, m.font) + 16 : 12;
+        grow(p.x < 0 ? p.x - w : p.x - 12, p.y - 16, p.x >= 0 ? p.x + w : p.x + 12, p.y + 16);
+      }
     }
     for (const s of layout.sections) grow(s.x, s.y, s.x + s.w, s.y + s.h);
-    for (const l of layout.labels) grow(l.x - (l.anchor === "end" ? 200 : 0), l.y - 14, l.x + (l.anchor === "start" ? 200 : 0), l.y + 6);
     return { x: x1, y: y1, w: x2 - x1, h: y2 - y1 };
   }
 
@@ -74,13 +79,14 @@ export function createScene(svg, { onSelect, onHover }) {
     const oldEdges = new Set(opts.fresh || !last ? [] : last.model.edges.map((e) => e.id));
     for (const [id, s] of before) if (!model.byId.has(id)) s.g.remove();
     layers.nodes.replaceChildren();
+    layers.labels.replaceChildren();
     const order = [...model.nodes].sort((a, b) => a.n.depth - b.n.depth);
     const parentOf = (id) => model.edges.find((e) => e.from === id)?.to;
     const moves = [];
     let rank = 0;
     for (const m of order) {
       const to = layout.pos.get(m.id);
-      const g = drawNode(m, layout.kind, to, ui, settings.known);
+      const g = drawNode(m, layout.kind, ui, settings.known);
       layers.nodes.appendChild(g);
       const prev = before.get(m.id);
       const origin = prev ?? before.get(parentOf(m.id)) ?? (m.id === model.goal ? to : layout.pos.get(parentOf(m.id)) ?? to);
@@ -104,6 +110,7 @@ export function createScene(svg, { onSelect, onHover }) {
         moves.forEach((mv) => (mv.g.style.opacity = ""));
         drawEdges(model, layout, settings, new Set(model.edges.map((e) => e.id).filter((id) => !oldEdges.has(id))));
         layers.edges.style.opacity = 1;
+        if (layout.kind === "dots") drawLabels(layers.labels, model, layout, settings.colorBy);
         layers.sections.style.opacity = 1;
       }
     };
@@ -130,6 +137,7 @@ export function createScene(svg, { onSelect, onHover }) {
       layers.nodes.replaceChildren();
       layers.edges.replaceChildren();
       layers.sections.replaceChildren();
+      layers.labels.replaceChildren();
       shown = new Map();
       last = null;
     },
@@ -140,6 +148,7 @@ export function createScene(svg, { onSelect, onHover }) {
     nodeEl: (id) => shown.get(id)?.g,
     highlight(id) {
       svg.classList.toggle("hovering", !!id);
+    for (const t of layers.labels.children) t.classList.toggle("hl", t.dataset.id === id);
       for (const p of layers.edges.children) p.classList.toggle("hl", !!id && (p.dataset.from === id || p.dataset.to === id));
     },
   };

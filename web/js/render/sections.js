@@ -1,6 +1,6 @@
-// Section decorations: blueprint panels (a tinted panel with a coloured bar,
-// a title and a subtitle, like Mazur / Ribet / Wiles in the FLT figure) and
-// radial section labels (like the FLT video).
+// Section panels for the blueprint: a tinted panel with a coloured bar, a
+// title and a subtitle, like Mazur / Ribet / Wiles in the FLT figure. (The
+// radial layout names a section by colouring its root's own label.)
 
 import { INK, MUTED, tint } from "../palette.js";
 import { el } from "./nodes.js";
@@ -18,12 +18,5 @@ export function drawSections(layer, layout, colorBy) {
     t.textContent = clip(s.name, Math.max(12, Math.floor(s.w / 8.5)));
     const sub = el("text", { x: s.x + 24, y: s.y + 42, fill: MUTED, style: "font:11px system-ui, sans-serif" }, g);
     sub.textContent = clip(s.subtitle, Math.max(16, Math.floor(s.w / 6)));
-  }
-  for (const l of layout.labels) {
-    const t = el("text", {
-      class: "section-label", x: l.x, y: l.y, "text-anchor": l.anchor, fill: colorBy === "section" ? l.hue : MUTED,
-      style: "font:500 13px system-ui, sans-serif", "paint-order": "stroke", stroke: "#faf9f5", "stroke-width": 4,
-    }, layer);
-    t.textContent = clip(l.text, 34);
   }
 }

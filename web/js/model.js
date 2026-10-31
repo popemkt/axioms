@@ -5,12 +5,18 @@
 import { hueOf, sectionHues } from "./palette.js";
 
 const FONT = { s: 11, m: 13, l: 15 };
-const BOX_W = 180;
+const BOX_W = 156;
 const ctx = document.createElement("canvas").getContext("2d");
 
 export const fontSize = (settings) => FONT[settings.labelSize];
 export const titleFont = (px, bold) => `${bold ? 600 : 500} ${px}px system-ui, -apple-system, "Segoe UI", sans-serif`;
 export const MONO = `10px ui-monospace, "SF Mono", Menlo, monospace`;
+
+/** Rendered width of `text` in `font`, in pixels. */
+export function measure(text, font) {
+  ctx.font = font;
+  return ctx.measureText(text).width;
+}
 
 /** Greedy word wrap to `width` pixels, at most `max` lines. */
 export function wrap(text, font, width, max = 3) {
