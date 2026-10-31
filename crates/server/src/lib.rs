@@ -2,4 +2,5 @@
 //! drive the API without a socket.
 
 pub mod api;
+pub mod relay;
 pub mod state;

@@ -20,6 +20,7 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/api/topics/{id}", get(topic))
         .route("/api/concepts/{id}/knowledge", post(set_knowledge))
         .route("/api/concepts/{id}/decompose", post(decompose))
+        .merge(crate::relay::routes())
         .with_state(state)
 }
 

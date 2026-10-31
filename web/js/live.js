@@ -11,6 +11,8 @@ const open = (r) => r.status === "pending" || r.status === "working";
 
 export async function connectLive({ uri, db }, { onChange, onPending, onLost }) {
   const { DbConnection } = await import("../vendor/spacetimedb.js");
+  // No address: this page's own origin, which relays to SpacetimeDB.
+  uri ||= location.origin.replace(/^http/, "ws");
   const key = `axioms.stdb.${uri}.${db}.token`;
   // A device link (#/device/<token>) makes this browser the same person as
   // the one that made it. The token is a bearer secret: tailnet only.

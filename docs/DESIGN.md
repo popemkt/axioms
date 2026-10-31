@@ -362,8 +362,13 @@ after-reboot restart):
 - `axioms-spacetimedb`: a transient systemd unit, standalone on
   127.0.0.1:4420, with data in `~/.local/share/axioms/spacetime/data`, a
   512 MiB page pool, `MemoryMax=1G` and `CPUQuota=200%`. It uses about
-  70 MB of RAM idle. It is exposed on :10005 for browsers' websockets.
+  70 MB of RAM idle. It is never exposed itself.
 - `axioms-live`: axioms-server on 127.0.0.1:4401, exposed on :10001 (it replaced the JSONL server there).
+- **One origin.** Browsers reach SpacetimeDB through axioms-server
+  (`crates/server/src/relay.rs`), which relays only what a client of the
+  `axioms` database needs: `POST /v1/identity/websocket-token` and that
+  database's `/subscribe` websocket. Publishing, deleting and SQL stay on
+  loopback. `AXIOMS_STDB_PUBLIC_URI` points browsers elsewhere instead.
 - The binaries are the official 2.14.0 release in user space
   (`scripts/spacetime-install.sh`). They are glibc-dynamic and run through
   nix-ld. nixpkgs has only 2.10.1, which is unfree and would build from
@@ -404,8 +409,8 @@ fast-moving API (weekly minor releases, 2.x renamed core APIs).
 
 **Known limits.**
 
-- **No authentication beyond the tailnet.** Anyone who can reach :10005 can
-  call reducers. Identities are anonymous tokens, and a device link carries
+- **No authentication beyond the tailnet.** Anyone who can reach the page
+  can call reducers. Identities are anonymous tokens, and a device link carries
   one (it is a bearer secret).
 - **Knowledge is a public table.** Each person sees only their own in the
   UI, but the rows are readable. A private table plus a per-sender view

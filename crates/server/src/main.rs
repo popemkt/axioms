@@ -5,9 +5,10 @@
 //! - `AXIOMS_STORE=jsonl|kb`, `AXIOMS_KB_ROOT`: keep it in a kb store instead
 //!   (see `axioms_store::open`)
 //! - `AXIOMS_STORE=spacetime`: live mode. Reads come from a SpacetimeDB
-//!   mirror (`AXIOMS_STDB_URI`, `AXIOMS_STDB_DB`), browsers connect to
-//!   `AXIOMS_STDB_PUBLIC_URI` and write through reducers, and the decompose
-//!   worker runs in-process unless `AXIOMS_WORKER=0`.
+//!   mirror (`AXIOMS_STDB_URI`, `AXIOMS_STDB_DB`), browsers subscribe and
+//!   write through reducers, and the decompose worker runs in-process unless
+//!   `AXIOMS_WORKER=0`. Browsers reach SpacetimeDB through this server's own
+//!   origin (`relay`), or at `AXIOMS_STDB_PUBLIC_URI` when that is set.
 //! - `AXIOMS_WEB`: the web UI directory (default: this repo's `web/`)
 //! - provider settings: see `axioms_agent::provider::from_env`
 
@@ -65,13 +66,13 @@ fn app_state() -> anyhow::Result<state::AppState> {
                 axioms_live::worker::pace(),
             ));
         }
-        let public_uri =
-            std::env::var("AXIOMS_STDB_PUBLIC_URI").unwrap_or_else(|_| cfg.uri.clone());
+        let public_uri = std::env::var("AXIOMS_STDB_PUBLIC_URI").unwrap_or_default();
         tracing::info!(uri = %cfg.uri, db = %cfg.db, %public_uri, "starting live");
         let store = Arc::new(axioms_store::MemoryStore::new());
         let live = state::LiveState {
             mirror,
             public_uri,
+            upstream: cfg.uri,
             db: cfg.db,
         };
         return Ok(state::AppState::new(Default::default(), store, learner()?).with_live(live));

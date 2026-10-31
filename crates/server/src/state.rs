@@ -25,8 +25,11 @@ pub struct AppState {
 
 pub struct LiveState {
     pub mirror: Arc<Mirror>,
-    /// The SpacetimeDB address browsers connect to, and the database.
+    /// The SpacetimeDB address browsers connect to; empty means this
+    /// server's own origin, which relays to `upstream` (see `relay`).
     pub public_uri: String,
+    /// The SpacetimeDB address this server reaches, and the database.
+    pub upstream: String,
     pub db: String,
 }
 
