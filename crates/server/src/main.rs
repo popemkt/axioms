@@ -2,12 +2,13 @@
 //!
 //! - `AXIOMS_ADDR` (default `127.0.0.1:4401`)
 //! - `AXIOMS_DATA`: the library file (see `axioms_store::default_path`)
+//! - `AXIOMS_STORE=jsonl|kb`, `AXIOMS_KB_ROOT`: keep it in a kb store instead
+//!   (see `axioms_store::open`)
 //! - `AXIOMS_WEB`: the web UI directory (default: this repo's `web/`)
 //! - provider settings: see `axioms_agent::provider::from_env`
 
 use axioms_agent::{Learner, LlmSource, provider};
 use axioms_server::{api, state};
-use axioms_store::{JsonlStore, Store};
 use axum::http::HeaderValue;
 use axum::http::header::CACHE_CONTROL;
 use std::sync::Arc;
@@ -25,10 +26,11 @@ async fn main() -> anyhow::Result<()> {
     let addr = std::env::var("AXIOMS_ADDR").unwrap_or_else(|_| "127.0.0.1:4401".into());
     let web = std::env::var("AXIOMS_WEB")
         .unwrap_or_else(|_| concat!(env!("CARGO_MANIFEST_DIR"), "/../../web").into());
-    let store = Arc::new(JsonlStore::new(axioms_store::default_path()));
+    let store: Arc<dyn axioms_store::Store> =
+        axioms_store::open(axioms_store::default_path())?.into();
     let lib = store.load()?;
     let learner = Learner::new(Arc::new(LlmSource::new(provider::from_env()?)));
-    tracing::info!(data = %store.path().display(), provider = %learner.label(), concepts = lib.graph.len(), "starting");
+    tracing::info!(store = %store.describe(), provider = %learner.label(), concepts = lib.graph.len(), "starting");
     let state = Arc::new(state::AppState::new(lib, store, learner));
     // Revalidate static files on every load, so a redeploy is seen at once.
     let web = tower::ServiceBuilder::new()

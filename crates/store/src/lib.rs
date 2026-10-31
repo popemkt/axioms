@@ -1,20 +1,27 @@
 //! Persistence for a [`Library`]. One contract ([`Store`]), every
 //! implementation goes through the same kb-shaped node codec, so the JSONL
-//! file and the in-memory store can never disagree about the data model.
+//! file, a kb store and the in-memory store can never disagree about the
+//! data model.
 
 mod codec;
 mod jsonl;
+mod kb;
 mod memory;
 pub mod node;
 pub mod schema;
+mod select;
 
 pub use codec::{from_nodes, to_nodes};
 pub use jsonl::JsonlStore;
+pub use kb::KbStore;
 pub use memory::MemoryStore;
+pub use select::open;
 
 use axioms_core::Library;
 
 pub trait Store: Send + Sync {
+    /// Where the library lives, for logs: a path or a kb root.
+    fn describe(&self) -> String;
     fn load(&self) -> anyhow::Result<Library>;
     fn save(&self, library: &Library) -> anyhow::Result<()>;
 }

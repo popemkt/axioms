@@ -42,6 +42,10 @@ impl JsonlStore {
 }
 
 impl Store for JsonlStore {
+    fn describe(&self) -> String {
+        format!("{}", self.path.display())
+    }
+
     fn load(&self) -> anyhow::Result<Library> {
         codec::from_nodes(&self.read()?)
     }

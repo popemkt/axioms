@@ -11,6 +11,12 @@ pub const TYPE: &str = "sys.f.type";
 pub const FIELD: &str = "sys.field";
 pub const TAG: &str = "sys.tag";
 pub const FIELDS: &str = "sys.f.fields";
+pub const FIELD_TYPE: &str = "sys.f.fieldType";
+pub const TEXT: &str = "sys.ft.text";
+pub const REF: &str = "sys.ft.ref";
+pub const TARGET_TAG: &str = "sys.f.targetTag";
+pub const CARDINALITY: &str = "sys.f.cardinality";
+pub const ONE: &str = "sys.cardinality.one";
 
 pub const STATEMENT: &str = "ax.f.statement";
 pub const EXPLANATION: &str = "ax.f.explanation";
@@ -35,22 +41,33 @@ pub fn knowledge_of(id: &str) -> Option<Knowledge> {
         .find(|k| knowledge_id(*k) == id)
 }
 
-/// The schema nodes, in a fixed order. The knowledge field declares its
-/// allowed values by its own children (kb's option-set shape).
+/// The schema nodes, in a fixed order, typed as kb types its own fields:
+/// prose fields are single text, `needs` refs only concepts, and the
+/// knowledge field declares its allowed values by its own children (kb's
+/// option-set shape).
 pub fn nodes() -> Vec<KbNode> {
-    let field =
-        |id: &str, text: &str| KbNode::new(id, text).with(TYPE, PropValue::Ref(FIELD.into()));
-    let mut knowledge = field(KNOWLEDGE, "knowledge");
+    let r = |id: &str| PropValue::Ref(id.into());
+    let field = |id: &str, text: &str| KbNode::new(id, text).with(TYPE, r(FIELD));
+    let prose = |id: &str, text: &str| {
+        field(id, text)
+            .with(FIELD_TYPE, r(TEXT))
+            .with(CARDINALITY, r(ONE))
+    };
+    let mut knowledge = field(KNOWLEDGE, "knowledge")
+        .with(FIELD_TYPE, r(REF))
+        .with(CARDINALITY, r(ONE));
     let options = [Knowledge::Unknown, Knowledge::Learning, Knowledge::Known];
     knowledge.children = options
         .iter()
         .map(|k| knowledge_id(*k).to_owned())
         .collect();
     let mut out = vec![
-        field(STATEMENT, "statement"),
-        field(EXPLANATION, "explanation"),
-        field(CHECK, "check question"),
-        field(NEEDS, "needs"),
+        prose(STATEMENT, "statement"),
+        prose(EXPLANATION, "explanation"),
+        prose(CHECK, "check question"),
+        field(NEEDS, "needs")
+            .with(FIELD_TYPE, r(REF))
+            .with(TARGET_TAG, r(CONCEPT)),
         knowledge,
     ];
     out.extend(options.iter().map(|k| {

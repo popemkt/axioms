@@ -21,6 +21,10 @@ impl MemoryStore {
 }
 
 impl Store for MemoryStore {
+    fn describe(&self) -> String {
+        "memory".into()
+    }
+
     fn load(&self) -> anyhow::Result<Library> {
         codec::from_nodes(&self.nodes.lock().expect("store lock"))
     }

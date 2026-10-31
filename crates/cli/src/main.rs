@@ -6,7 +6,7 @@ mod render;
 use anyhow::Context;
 use axioms_agent::{Learner, LlmSource, provider};
 use axioms_core::{ConceptId, Knowledge, Library, roadmap, view};
-use axioms_store::{JsonlStore, Store};
+
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
@@ -14,7 +14,8 @@ use std::sync::{Arc, Mutex};
 #[derive(Parser)]
 #[command(version, about = "Learn any topic starting from what you already know")]
 struct Cli {
-    /// The library file (kb-style JSONL nodes).
+    /// The library file (kb-style JSONL nodes). With AXIOMS_STORE=kb the
+    /// library is kept in the kb store at AXIOMS_KB_ROOT instead.
     #[arg(long, env = "AXIOMS_DATA", default_value_os_t = axioms_store::default_path())]
     data: PathBuf,
     #[command(subcommand)]
@@ -60,7 +61,7 @@ async fn main() -> anyhow::Result<()> {
         .with_writer(std::io::stderr)
         .init();
     let cli = Cli::parse();
-    let store = JsonlStore::new(&cli.data);
+    let store = axioms_store::open(cli.data.clone())?;
     let lib = Mutex::new(store.load()?);
     let learner = || -> anyhow::Result<Learner> {
         Ok(Learner::new(Arc::new(
