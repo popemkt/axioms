@@ -6,6 +6,7 @@ pub mod graph;
 pub mod library;
 pub mod merge;
 pub mod roadmap;
+mod structure;
 pub mod view;
 
 pub use concept::{Concept, ConceptId, Knowledge, normalize};

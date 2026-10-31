@@ -71,3 +71,19 @@ fn known_goal_has_an_empty_roadmap() {
     assert_eq!(v.nodes.len(), 1);
     assert!(roadmap(&v).steps.is_empty());
 }
+
+#[test]
+fn view_carries_depth_sections_dependants_and_implied_edges() {
+    // goal → {x, y}; x → {a}; y → {a, b}; a → {deep}; plus a shortcut y → deep
+    let mut g = sample();
+    g.add_need(&id("y"), &id("deep")).unwrap();
+    let v = view(&g, &id("goal")).unwrap();
+    let n = |s: &str| v.nodes.iter().find(|n| n.concept.id == id(s)).unwrap();
+    assert_eq!((n("goal").depth, n("a").depth, n("deep").depth), (0, 2, 2));
+    assert_eq!(n("goal").section, None);
+    assert_eq!(n("x").section, Some(id("x")));
+    assert_eq!(n("b").section, Some(id("y")));
+    assert_eq!(n("a").section, None, "a is shared by x and y");
+    assert_eq!(n("a").dependants, 2);
+    assert_eq!(v.implied, vec![(id("y"), id("deep"))]);
+}

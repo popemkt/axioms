@@ -6,6 +6,7 @@
 
 use crate::concept::{Concept, ConceptId, Knowledge};
 use crate::graph::ConceptGraph;
+use crate::structure::structure;
 use serde::Serialize;
 use std::collections::{BTreeSet, VecDeque};
 
@@ -28,6 +29,13 @@ pub struct ViewNode {
     pub hidden_below: usize,
     /// Whether this concept has been decomposed (has any prerequisites at all).
     pub decomposed: bool,
+    /// Fewest "needs" steps from the goal (the goal is 0).
+    pub depth: usize,
+    /// The section (a direct prerequisite of the goal) this concept sits
+    /// under; `None` for the goal and for concepts shared by two sections.
+    pub section: Option<ConceptId>,
+    /// How many drawn concepts need this one.
+    pub dependants: usize,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -35,6 +43,9 @@ pub struct View {
     pub goal: ConceptId,
     pub nodes: Vec<ViewNode>,
     pub edges: Vec<(ConceptId, ConceptId)>,
+    /// Edges also implied by a longer path: dropping them gives the
+    /// transitive reduction, as the FLT landmark graph draws it.
+    pub implied: Vec<(ConceptId, ConceptId)>,
 }
 
 /// Does the walk continue below this concept?
@@ -73,6 +84,7 @@ pub fn view(graph: &ConceptGraph, goal: &ConceptId) -> Option<View> {
         }
     }
     edges.sort();
+    let s = structure(goal, &edges);
     let nodes = visible
         .iter()
         .filter_map(|id| graph.get(id))
@@ -87,6 +99,9 @@ pub fn view(graph: &ConceptGraph, goal: &ConceptId) -> Option<View> {
                     .count()
             },
             decomposed: !graph.needs(&c.id).is_empty(),
+            depth: s.depth.get(&c.id).copied().unwrap_or_default(),
+            section: s.section.get(&c.id).cloned(),
+            dependants: s.dependants.get(&c.id).copied().unwrap_or_default(),
             concept: c.clone(),
         })
         .collect();
@@ -94,6 +109,7 @@ pub fn view(graph: &ConceptGraph, goal: &ConceptId) -> Option<View> {
         goal: goal.clone(),
         nodes,
         edges,
+        implied: s.implied,
     })
 }
 
