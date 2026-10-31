@@ -4,7 +4,10 @@
 # exposed on the tailnet. Run again after a reboot; it replaces old units.
 #
 #   axioms-spacetimedb  127.0.0.1:4420 → https://<host>:10005 (websocket)
-#   axioms-live         127.0.0.1:4404 → https://<host>:10004 (UI + API)
+#   axioms-live         127.0.0.1:4401 → https://<host>:10001 (UI + API)
+#
+# It replaces the JSONL server (unit trial-axioms) on 4401. The permanent
+# home is the dotfiles service (my.services.axioms); this is the stopgap.
 #
 # Data: ~/.local/share/axioms/spacetime/data (survives restarts).
 # Logs: journalctl -u axioms-spacetimedb / -u axioms-live
@@ -22,17 +25,18 @@ run() { # unit, then the command; gentle limits on a host with hardware resets
     --property=MemoryMax=1G --property=CPUQuota=200% --working-directory="$PWD" \
     --setenv=HOME="$HOME" --setenv=PATH="$P" --setenv=USER="$USER" --setenv=LANG=C.UTF-8 "$@"
 }
+sudo -n systemctl stop trial-axioms 2>/dev/null || true
 run axioms-spacetimedb "$ST/2.14.0/spacetimedb-standalone" start --listen-addr 127.0.0.1:4420 \
   --data-dir "$ST/data" --jwt-priv-key-path "$ST/id_ecdsa" --jwt-pub-key-path "$ST/id_ecdsa.pub" \
   --page_pool_max_size 536870912 --non-interactive
 sleep 3
-run axioms-live --setenv=AXIOMS_ADDR=127.0.0.1:4404 --setenv=AXIOMS_STORE=spacetime \
+run axioms-live --setenv=AXIOMS_ADDR=127.0.0.1:4401 --setenv=AXIOMS_STORE=spacetime \
   --setenv=AXIOMS_STREAM_MS="${AXIOMS_STREAM_MS:-500}" \
   --setenv=AXIOMS_STDB_PUBLIC_URI="wss://$HOST:10005" "$PWD/target/release/axioms-server"
 sleep 2
-curl -fsS http://127.0.0.1:4404/api/meta && echo
-for map in "10004 http://127.0.0.1:4404" "10005 http://127.0.0.1:4420"; do
+curl -fsS http://127.0.0.1:4401/api/meta && echo
+for map in "10001 http://127.0.0.1:4401" "10005 http://127.0.0.1:4420"; do
   set -- $map
   tailscale serve --bg --https="$1" "$2" 2>/dev/null || sudo -n tailscale serve --bg --https="$1" "$2"
 done
-echo "live: https://$HOST:10004"
+echo "live: https://$HOST:10001"

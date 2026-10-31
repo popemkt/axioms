@@ -363,7 +363,7 @@ after-reboot restart):
   127.0.0.1:4420, with data in `~/.local/share/axioms/spacetime/data`, a
   512 MiB page pool, `MemoryMax=1G` and `CPUQuota=200%`. It uses about
   70 MB of RAM idle. It is exposed on :10005 for browsers' websockets.
-- `axioms-live`: axioms-server on 127.0.0.1:4404, exposed on :10004.
+- `axioms-live`: axioms-server on 127.0.0.1:4401, exposed on :10001 (it replaced the JSONL server there).
 - The binaries are the official 2.14.0 release in user space
   (`scripts/spacetime-install.sh`). They are glibc-dynamic and run through
   nix-ld. nixpkgs has only 2.10.1, which is unfree and would build from

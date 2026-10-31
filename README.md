@@ -120,7 +120,7 @@ localStorage). The graph is shared; what you know is yours. Click the
 
 ```sh
 scripts/spacetime-install.sh   # SpacetimeDB 2.14.0 in ~/.local/share/axioms/spacetime
-scripts/serve-live.sh          # SpacetimeDB + live server as systemd units, on :10004/:10005
+scripts/serve-live.sh          # SpacetimeDB + live server as systemd units, on :10001/:10005
 scripts/spacetime publish -s axioms axioms --module-path spacetime -y   # after module changes
 AXIOMS_STORE=spacetime axioms import ~/.local/share/axioms/nodes.jsonl  # bring a JSONL library in
 ```
