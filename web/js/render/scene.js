@@ -116,7 +116,11 @@ export function createScene(svg, { onSelect, onHover }) {
   function fit() {
     if (!last) return;
     const narrow = svg.clientWidth < 600;
-    pz.fit(last.box, { minK: narrow ? 0.55 : 0, anchor: last.layout.kind === "boxes" ? "bottom" : "center" });
+    pz.fit(last.box, {
+      minK: narrow ? 0.55 : 0,
+      anchor: last.layout.kind === "boxes" ? "bottom" : "center",
+      focus: last.layout.pos.get(last.model.goal),
+    });
   }
 
   return {

@@ -108,7 +108,7 @@ main { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 400px; 
   main { grid-template-columns: 1fr; grid-template-rows: 58dvh auto; overflow-y: auto; }
   #side { border-left: 0; border-top: 1px solid var(--line); overflow: visible; }
   #card { position: fixed; left: 0; right: 0; bottom: 0; margin: 0; max-height: 52dvh; overflow-y: auto; border-radius: 16px 16px 0 0; z-index: 5; padding-bottom: calc(14px + env(safe-area-inset-bottom)); }
-  #legend { font-size: .68em; max-width: calc(100% - 140px); }
+  #legend { font-size: .68em; max-width: calc(100% - 140px); flex-wrap: nowrap; overflow-x: auto; white-space: nowrap; scrollbar-width: none; }
   #display { left: 8px; right: 8px; width: auto; bottom: 52px; max-height: 70%; }
   #empty { padding: 6%; } #empty h1 { font-size: 1.3em; }
 }

@@ -12,11 +12,18 @@ collapses. If you don't get a concept, **decompose** it, and it expands another
 level, as deep as you like. The **roadmap** is the path from your known
 frontier up to the goal.
 
-![FLT blueprint with a known concept collapsed](docs/media/flt-known-collapsed.jpg)
+The graph is drawn in the visual language of Anthropic's FLT formalisation:
+the **blueprint** figure (tinted section panels, sans titles over monospace
+ids, orthogonal edges into a clay goal) and the **radial** growth video.
 
-| Decomposing a leaf | Attention in transformers | Phone |
-|---|---|---|
-| ![](docs/media/flt-decomposed.jpg) | ![](docs/media/attention.jpg) | ![](docs/media/phone-card.jpg) |
+| Reference (study only) | axioms |
+|---|---|
+| ![FLT blueprint figure](docs/media/reference/dag.png) | ![Attention, blueprint layout](docs/media/after/desktop-blueprint-attention.jpg) |
+| ![FLT video, day 11](docs/media/reference/video-day11.jpg) | ![Attention, radial layout with the Display panel](docs/media/after/desktop-radial-display.jpg) |
+
+| FLT blueprint | Growth replay | Phone | Before (v0) |
+|---|---|---|---|
+| ![](docs/media/after/desktop-blueprint-flt.jpg) | ![](docs/media/after/growth-2.jpg) | ![](docs/media/after/phone-blueprint.jpg) | ![](docs/media/before/desktop.jpg) |
 
 ## Use it
 
@@ -28,10 +35,28 @@ Open **https://shared-server.taild98079.ts.net:10001** (tailnet only).
 - **Click a node** to open its card: statement, explanation and check
   question. Then choose **I know this**, **Learning**, **Unknown**, or
   **Don't get it: decompose**.
-- **Colours** follow a blueprint legend: purple is the goal, white is unknown,
-  amber is learning, and green (dimmed) is known, one of your axioms. A dashed
-  border means the concept has not been decomposed yet. "＋N below" counts the
-  concepts a known node hides.
+- **Reading the graph**:
+  - Premises sit above the conclusions they serve, and the clay goal is at
+    the bottom.
+  - Each **section** is one of the goal's direct prerequisites with
+    everything below it, drawn as a tinted panel. Its key concept is filled
+    with the section's tint.
+  - **Unknown** concepts are white, and **learning** carries a gold mark.
+  - **Known** concepts (your axioms) are dimmed with a ✓, and nothing below
+    them is drawn.
+  - A **dashed outline** means the concept has not been decomposed yet.
+- **Display** (bottom right) changes how the graph is drawn. Settings are
+  remembered per device:
+  - **Layout**: blueprint, radial (the FLT video) or force.
+  - **Labels**: all, important, hover or none.
+  - **Colour by**: section, state or depth.
+  - **Known concepts**: dim, show or hide.
+  - **Edges**: reduced (the transitive reduction, as the FLT landmark graph
+    draws it) or all.
+  - **Link style**: flow, curved or straight.
+  - **Size by**: uniform, dependants or depth.
+  - **Label size**: S, M or L.
+  - **Replay growth** redraws the graph from the goal outward.
 - **Roadmap** (right panel, or below the graph on a phone): the steps in
   order. Tick a step to mark it known. Click a step to find it in the graph.
 - **Your topics** (top right) lists every topic you have stated. Axioms carry
@@ -91,7 +116,7 @@ about 200 lines.
 | `agent` | the `ModelProvider` trait (`ClaudeCli`, `RigOpenAi`), the `ConceptSource` trait (`LlmSource`, `ScriptedSource`), the prompt contracts, and the `Learner` loop. |
 | `server` | `axum`: the JSON API under `/api`, and the static UI from `web/`. |
 | `cli` | `clap`: `axioms learn/show/decompose/mark/topics`. |
-| `web/` | vanilla ES modules with no build step. Cytoscape.js and cytoscape-dagre (which bundles dagre) are vendored in `web/vendor/` (3.34.4 / 4.0.1, MIT). |
+| `web/` | vanilla ES modules with no build step. An SVG renderer of its own, with layouts in `web/js/layout/` and drawing in `web/js/render/`. dagre 3.1.3 (MIT) is vendored in `web/vendor/`. |
 
 The design is in [docs/DESIGN.md](docs/DESIGN.md): the graph model, the
 decomposition prompt contract, the roadmap algorithm, dedupe, and the open
@@ -108,3 +133,14 @@ question of a link to kb.
 - **"Explanation" is part of the decomposition answer**, not a separate call.
   One call returns names, statements, explanations and check questions, which
   keeps the first view at a single model round trip.
+
+## Credits
+
+The graph's look is modelled on Anthropic's
+[Formalizing Fermat's Last Theorem](https://www.anthropic.com/research/formalizing-fermats-last-theorem):
+its blueprint figure and formalisation video, and the
+[FLT in Lean 4 landmark graph](https://tianyipeng.github.io/fermats-last-theorem/).
+The captures in `docs/media/reference/` are kept **for study only**. They are
+not shipped with the app, and their copyright stays with their owners. The
+display options mirror the graph lens of [kb](https://github.com/popemkt/kb)
+without sharing its code.

@@ -10,7 +10,7 @@ export const KNOWN_FILL = "#ece9e1";
 
 const SECTION_HUES = ["#788c5d", "#6a9bcc", "#c46686", "#d4a12a", "#8b87d6", "#4f9a92", "#b5704a", "#9a7bb0"];
 const STATE = { goal: CLAY, unknown: "#5d7ba3", learning: "#d4a12a", known: "#788c5d" };
-const DEPTH = ["#d97757", "#c46686", "#8b87d6", "#6a9bcc", "#4f9a92", "#788c5d"];
+const DEPTH = ["#c46686", "#8b87d6", "#6a9bcc", "#4f9a92", "#788c5d", "#d4a12a"];
 
 /** Section id → hue, stable for a view: sections sorted by id. */
 export function sectionHues(view) {

@@ -34,18 +34,23 @@ export function radial(model) {
     leaves.set(id, n);
     return n;
   };
-  const total = count(model.goal);
+  // One leaf slot per leaf, plus a gap slot between sections (the wedges
+  // of the FLT video are separated by empty sky).
+  const tops = children.get(model.goal) ?? [];
+  const GAP = tops.length > 1 ? 1.2 : 0;
+  const slot = (2 * Math.PI) / (count(model.goal) + GAP * tops.length);
   const angle = new Map();
   const place = (id, from) => {
-    const span = (2 * Math.PI * leaves.get(id)) / total;
-    angle.set(id, from + span / 2);
+    angle.set(id, from + (slot * leaves.get(id)) / 2);
     let at = from;
     for (const k of children.get(id) ?? []) {
       place(k, at);
-      at += (2 * Math.PI * leaves.get(k)) / total;
+      at += slot * leaves.get(k) + (id === model.goal ? slot * GAP : 0);
     }
   };
-  place(model.goal, -Math.PI / 2);
+  place(model.goal, -Math.PI / 2 + (slot * GAP) / 2);
+  angle.set(model.goal, 0);
+  const total = count(model.goal);
   const level = new Map([[model.goal, 0]]);
   const lvl = (id) => level.get(id) ?? level.set(id, lvl(parent.get(id)) + 1).get(id);
   const ring = Math.max(RING, (total * 26) / (2 * Math.PI * Math.max(1, ...model.nodes.map((m) => lvl(m.id)))));

@@ -42,8 +42,9 @@ function dots(a, b, ra, rb, style, tree) {
     let delta = a.a - b.a;
     while (delta > Math.PI) delta -= 2 * Math.PI;
     while (delta < -Math.PI) delta += 2 * Math.PI;
-    const arc = b.r === 0 ? `L${f(p2.x)},${f(p2.y)}` : `A${f(rm)},${f(rm)} 0 0 ${delta > 0 ? 1 : 0} ${f(p2.x)},${f(p2.y)}`;
     const [, end] = trim(p2, a, 0, ra);
+    if (b.r === 0) return `M${f(b.x)},${f(b.y)} L${f(p2.x)},${f(p2.y)} L${f(end.x)},${f(end.y)}`;
+    const arc = `A${f(rm)},${f(rm)} 0 0 ${delta > 0 ? 1 : 0} ${f(p2.x)},${f(p2.y)}`;
     return `M${f(b.x)},${f(b.y)} L${f(p1.x)},${f(p1.y)} ${arc} L${f(end.x)},${f(end.y)}`;
   }
   const [s, t] = trim(a, b, ra, rb);

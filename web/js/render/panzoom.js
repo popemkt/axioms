@@ -62,13 +62,19 @@ export function panzoom(svg, group, { min = 0.12, max = 3 } = {}) {
   return {
     /** Whether the last press was a drag (so it is not a tap). */
     dragged: () => moved > 4,
-    /** Animate to fit `box` ({x, y, w, h}); `minK` keeps text readable. */
-    fit(box, { pad = 28, minK = 0, duration = 450, anchor = "center" } = {}) {
+    /** Animate to fit `box` ({x, y, w, h}). `minK` keeps text readable; when
+     *  it wins, the view centres on `focus` (the goal) instead of the box. */
+    fit(box, { pad = 28, minK = 0, duration = 450, anchor = "center", focus = null } = {}) {
       const W = svg.clientWidth, H = svg.clientHeight;
       if (!W || !H || !box) return;
-      const k = clamp(Math.max(minK, Math.min((W - 2 * pad) / box.w, (H - 2 * pad) / box.h)), min, 1.4);
-      const cx = box.x + box.w / 2;
-      const to = { k, x: W / 2 - cx * k, y: anchor === "bottom" && box.h * k > H ? H - pad - (box.y + box.h) * k : H / 2 - (box.y + box.h / 2) * k };
+      const natural = Math.min((W - 2 * pad) / box.w, (H - 2 * pad) / box.h);
+      const k = clamp(Math.max(minK, natural), min, 1.4);
+      const clamped = focus && natural < minK;
+      const cx = clamped ? focus.x : box.x + box.w / 2;
+      const bottom = clamped ? focus.y + 40 : box.y + box.h;
+      const cy = box.y + box.h / 2;
+      // The legend and tools overlay the bottom edge: keep the goal above them.
+      const to = { k, x: W / 2 - cx * k, y: anchor === "bottom" && box.h * k > H ? H - pad - 48 - bottom * k : H / 2 - cy * k };
       const from = { ...t };
       const start = performance.now();
       cancelAnimationFrame(anim);

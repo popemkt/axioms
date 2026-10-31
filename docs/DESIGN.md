@@ -20,6 +20,81 @@
   concepts its being known hides), and `decomposed` (whether it has any
   prerequisites). The UI draws exactly this, and nothing in the view is stored.
 
+## Display structure
+
+`core::view` also gives each drawn concept the facts that drawing needs,
+so the UI never re-derives graph facts (`core::structure`):
+
+- `depth`: the fewest "needs" steps from the goal.
+- `dependants`: how many drawn concepts need it.
+- `section`: the section it belongs to.
+  - Section roots are the goal's direct prerequisites in the **transitive
+    reduction**.
+  - A concept joins its nearest root. A tie goes first to the section most of
+    its dependants are in, so a branch keeps one colour; then to the smaller
+    section, so panels stay balanced; then by id.
+  - Every concept but the goal has a section.
+- `implied` (on the view): edges that a longer path already implies.
+  Dropping them gives the transitive reduction, which is what the FLT
+  landmark graph draws and what "Edges: reduced" shows.
+
+## Rendering
+
+**Choice: a small SVG renderer of our own, with dagre for the layered
+layout.**
+
+The target look is Anthropic's FLT blueprint figure and video, studied from
+the captures in `docs/media/reference/`. Its features:
+
+- an ivory page;
+- tinted section panels, each with a coloured bar, a title and a subtitle;
+- rounded boxes with a sans-serif title over a monospace identifier;
+- dark orthogonal edges that merge into buses;
+- a clay goal at the bottom;
+- in the video, a radial dendrogram that grows outward from the goal, with
+  one hue per section.
+
+Why not the alternatives:
+
+- **Cytoscape** (v0's renderer) cannot draw two type styles in one label,
+  polar elbow edges, or panel headers.
+- **Graphviz in WASM** (which the landmark graph uses) gets the static look
+  but not smooth growth or interaction, and it costs a large WASM download.
+- **sigma.js / WebGL** is built for thousands of nodes, and our graphs have
+  tens.
+
+The pipeline, `web/js/`:
+
+1. `model.js`: view + settings → a drawing model. It filters known
+   concepts, reduces edges, measures and wraps labels, and assigns hues.
+2. `layout/`: each layout takes the model and returns positions, plus panels
+   or labels.
+   - `blueprint`: dagre top-down. Each section is a dagre cluster, drawn as
+     a panel.
+   - `radial`: a spanning tree that prefers a parent in the same section,
+     with leaf-proportional wedges and a gap between sections.
+   - `force`: relaxes from the radial positions; deterministic.
+3. `render/`: SVG nodes, sections and edge paths, plus pan, zoom and pinch.
+   - "flow" edges are orthogonal buses in the blueprint and polar elbows in
+     the radial layout.
+4. `render/scene.js` animates between drawings:
+   - concepts glide to their new places;
+   - new concepts grow out of the concept that needs them, nearest the goal
+     first;
+   - edges draw themselves in afterwards;
+   - **Replay growth** redraws from nothing.
+
+**State over hue.**
+- The section hue colours the outline.
+- The goal is clay, and a section's key concept is filled with its tint.
+- Learning carries a gold mark.
+- Known is dimmed (or shown, or hidden) and marked ✓.
+- Not decomposed is a dashed outline.
+
+**Settings** (`settings.js`) are one schema that the Display panel renders.
+They are stored in `localStorage`, so they are per device, and they mirror
+kb's graph lens: layout, label density, link style, colour by and size by.
+
 ## Decomposition prompt contract
 
 One call per decomposition (`agent::prompts`). The input is the target's name
