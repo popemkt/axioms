@@ -4,6 +4,7 @@
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--ink); background: var(--bg);
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body { margin: 0; height: 100dvh; display: flex; flex-direction: column; }
 button { font: inherit; cursor: pointer; }
 .muted { color: var(--muted); font-weight: 400; font-size: .85em; }

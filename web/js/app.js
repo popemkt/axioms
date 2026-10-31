@@ -44,6 +44,7 @@ function show(bp) {
   showCard();
   const want = `#/topic/${encodeURIComponent(state.goal)}`;
   if (location.hash !== want) history.replaceState(null, "", want);
+  $("topics").value = state.goal;
 }
 
 function showCard() {

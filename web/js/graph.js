@@ -48,6 +48,8 @@ const style = [
   },
 ];
 
+const MIN_READABLE_ZOOM = 0.6;
+
 const layoutOptions = {
   name: "dagre",
   rankDir: "TB",
@@ -108,9 +110,25 @@ export function createGraph(container, { onSelect }) {
       if (parent.nonempty()) n.position({ ...parent.position() });
     });
     fresh.style("opacity", 0);
-    cy.elements().difference(leaving).layout(layoutOptions).run();
+    cy.elements()
+      .difference(leaving)
+      .layout({ ...layoutOptions, stop: readable })
+      .run();
     fresh.animate({ style: { opacity: 1 } }, { duration: 450 });
     setTimeout(() => fresh.removeStyle("opacity"), 500);
+  }
+
+  // A fitted wide graph can be too small to read on a phone: zoom in to a
+  // readable floor, keeping the goal at the top centre. Pan to see the rest.
+  function readable() {
+    if (cy.zoom() >= MIN_READABLE_ZOOM) return;
+    const goal = cy.nodes("[status = 'goal']").first();
+    if (goal.empty()) return;
+    const p = goal.position();
+    cy.animate(
+      { zoom: MIN_READABLE_ZOOM, pan: { x: cy.width() / 2 - p.x * MIN_READABLE_ZOOM, y: 40 - p.y * MIN_READABLE_ZOOM + 24 } },
+      { duration: 300 },
+    );
   }
 
   return {
