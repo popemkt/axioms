@@ -6,7 +6,7 @@
 use crate::source::{ConceptSource, DecomposeRequest};
 use anyhow::Context;
 use axioms_core::{ConceptId, Knowledge, Library, Merged, Resolution, normalize};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::sync::{Arc, Mutex, MutexGuard};
 
 /// How many names of known and existing concepts a request carries.
@@ -14,6 +14,22 @@ const CONTEXT_NAMES: usize = 150;
 
 pub struct Learner {
     source: Arc<dyn ConceptSource>,
+    /// Concepts being decomposed right now: a second request for one is
+    /// refused rather than racing the first into duplicate concepts.
+    in_flight: Mutex<HashSet<ConceptId>>,
+}
+
+/// Holds a concept's in-flight mark; dropping it (even on error or
+/// cancellation) clears the mark.
+struct InFlight<'l>(&'l Mutex<HashSet<ConceptId>>, ConceptId);
+
+impl Drop for InFlight<'_> {
+    fn drop(&mut self) {
+        self.0
+            .lock()
+            .unwrap_or_else(|p| p.into_inner())
+            .remove(&self.1);
+    }
 }
 
 fn lock(lib: &Mutex<Library>) -> MutexGuard<'_, Library> {
@@ -22,7 +38,10 @@ fn lock(lib: &Mutex<Library>) -> MutexGuard<'_, Library> {
 
 impl Learner {
     pub fn new(source: Arc<dyn ConceptSource>) -> Self {
-        Learner { source }
+        Learner {
+            source,
+            in_flight: Mutex::default(),
+        }
     }
 
     pub fn label(&self) -> String {
@@ -43,8 +62,12 @@ impl Learner {
             let fresh = l.graph.needs(&id).is_empty();
             (id, fresh)
         };
-        if fresh {
-            self.decompose(lib, &id, Some(&id), depth).await?;
+        if fresh && let Err(e) = self.decompose(lib, &id, Some(&id), depth).await {
+            // Leave no ghost topic behind (unless another request owns it).
+            if !self.is_in_flight(&id) {
+                lock(lib).forget_topic(&id);
+            }
+            return Err(e);
         }
         Ok(id)
     }
@@ -57,6 +80,11 @@ impl Learner {
         goal: Option<&ConceptId>,
         depth: u8,
     ) -> anyhow::Result<Merged> {
+        let _mark = {
+            let mut set = self.in_flight.lock().unwrap_or_else(|p| p.into_inner());
+            anyhow::ensure!(set.insert(id.clone()), "`{id}` is already being decomposed");
+            InFlight(&self.in_flight, id.clone())
+        };
         let request = request_for(&lock(lib), id, goal, depth)?;
         let decomposition = self.source.decompose(&request).await?;
         let collisions = {
@@ -80,6 +108,15 @@ impl Learner {
         let merged = decomposition.apply(&mut lock(lib).graph, id, &resolutions);
         tracing::info!(target = %id, ?merged, "decomposed");
         Ok(merged)
+    }
+}
+
+impl Learner {
+    fn is_in_flight(&self, id: &ConceptId) -> bool {
+        self.in_flight
+            .lock()
+            .unwrap_or_else(|p| p.into_inner())
+            .contains(id)
     }
 }
 

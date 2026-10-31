@@ -80,3 +80,20 @@ fn jsonl_keeps_timestamps_of_unchanged_nodes() {
         .count();
     assert_eq!(changed, 1);
 }
+
+#[test]
+fn jsonl_keeps_nodes_it_does_not_own() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("nodes.jsonl");
+    std::fs::write(
+        &path,
+        r#"{"id":"01JNOTE","text":"a kb note","props":{},"children":[]}"#,
+    )
+    .unwrap();
+    let store = JsonlStore::new(&path);
+    store.save(&sample()).unwrap();
+    store.save(&store.load().unwrap()).unwrap();
+    let text = std::fs::read_to_string(&path).unwrap();
+    assert_eq!(text.matches("01JNOTE").count(), 1);
+    assert_eq!(store.load().unwrap().graph.len(), 2);
+}

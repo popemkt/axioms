@@ -93,3 +93,12 @@ async fn a_distinct_verdict_keeps_two_concepts() {
             .is_some()
     );
 }
+
+#[tokio::test]
+async fn a_failed_first_decomposition_leaves_no_ghost_topic() {
+    let learner = Learner::new(Arc::new(script(true)));
+    let lib = Mutex::new(Library::default());
+    assert!(learner.learn(&lib, "Unscripted", 2).await.is_err());
+    let l = lib.lock().unwrap();
+    assert!(l.graph.is_empty() && l.topics.is_empty());
+}

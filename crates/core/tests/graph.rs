@@ -57,3 +57,18 @@ fn stating_a_topic_reuses_by_name_and_moves_it_first() {
     assert_eq!(lib.topics, vec![a, b]);
     assert_eq!(lib.graph.len(), 2);
 }
+
+#[test]
+fn a_failed_topic_can_be_forgotten_but_linked_concepts_stay() {
+    let mut lib = axioms_core::Library::default();
+    let t = lib.state_topic("Ghost");
+    lib.forget_topic(&t);
+    assert!(lib.graph.is_empty() && lib.topics.is_empty());
+    let mut g = graph(&[("a", "b")]);
+    assert!(!g.remove_isolated(&id("b")));
+    g.upsert(concept("c"));
+    assert!(g.remove_isolated(&id("c")));
+    g.upsert(concept("d"));
+    g.add_need(&id("d"), &id("a")).unwrap();
+    assert_eq!(g.needs(&id("d")), vec![&id("a")]);
+}

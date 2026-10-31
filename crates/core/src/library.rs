@@ -26,4 +26,11 @@ impl Library {
         self.topics.insert(0, id.clone());
         id
     }
+
+    /// Undo [`Self::state_topic`] for a topic that was never decomposed: drop
+    /// it from the topics, and drop the concept if nothing links to it.
+    pub fn forget_topic(&mut self, id: &ConceptId) {
+        self.topics.retain(|t| t != id);
+        self.graph.remove_isolated(id);
+    }
 }

@@ -107,6 +107,9 @@ async fn set_knowledge(
     let id = ConceptId(id);
     {
         let mut lib = s.lib();
+        if lib.graph.get(&b.goal).is_none() {
+            return Err(ApiError::not_found(&b.goal));
+        }
         let c = lib
             .graph
             .get_mut(&id)
@@ -128,8 +131,10 @@ async fn decompose(
     Json(b): Json<DecomposeBody>,
 ) -> Api<Blueprint> {
     let id = ConceptId(id);
-    if s.lib().graph.get(&id).is_none() {
-        return Err(ApiError::not_found(&id));
+    for c in [&id, &b.goal] {
+        if s.lib().graph.get(c).is_none() {
+            return Err(ApiError::not_found(c));
+        }
     }
     let _permit = s.model_calls.acquire().await.expect("semaphore open");
     s.learner.decompose(&s.lib, &id, Some(&b.goal), 1).await?;

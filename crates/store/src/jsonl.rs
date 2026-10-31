@@ -47,14 +47,19 @@ impl Store for JsonlStore {
     }
 
     fn save(&self, library: &Library) -> anyhow::Result<()> {
-        let old: HashMap<String, KbNode> = self
-            .read()?
-            .into_iter()
-            .map(|n| (n.id.clone(), n))
-            .collect();
+        let existing = self.read()?;
+        let old: HashMap<String, KbNode> =
+            existing.iter().map(|n| (n.id.clone(), n.clone())).collect();
         let now = humantime::format_rfc3339_millis(SystemTime::now()).to_string();
         let mut out = String::new();
-        for mut n in codec::to_nodes(library) {
+        let ours = codec::to_nodes(library);
+        // Nodes the codec does not own (another tool's, in a shared kb
+        // store) are kept as they are, before ours.
+        for n in existing.iter().filter(|n| !codec::owns(n)) {
+            out.push_str(&serde_json::to_string(n)?);
+            out.push('\n');
+        }
+        for mut n in ours {
             match old.get(&n.id) {
                 Some(o) if o.same_content(&n) => {
                     n.created_at.clone_from(&o.created_at);

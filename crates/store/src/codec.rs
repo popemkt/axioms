@@ -37,6 +37,12 @@ pub fn to_nodes(library: &Library) -> Vec<KbNode> {
     out
 }
 
+/// Whether a node is the codec's to write (and so to drop when the library
+/// no longer has it): a concept, the topics outline, or an `ax.*` schema node.
+pub fn owns(node: &KbNode) -> bool {
+    node.id.starts_with("ax.") || node.refs(TYPE).any(|t| t == CONCEPT)
+}
+
 /// Rebuild a library from nodes. Nodes that are not concepts or the topics
 /// outline are ignored, so the file can share a kb store with other nodes.
 pub fn from_nodes(nodes: &[KbNode]) -> anyhow::Result<Library> {

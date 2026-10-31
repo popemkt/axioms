@@ -4,7 +4,7 @@
 use crate::concept::{Concept, ConceptId, normalize};
 use petgraph::Direction;
 use petgraph::algo::has_path_connecting;
-use petgraph::graph::{DiGraph, NodeIndex};
+use petgraph::stable_graph::{NodeIndex, StableDiGraph};
 use std::collections::{BTreeMap, HashMap};
 
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
@@ -19,7 +19,7 @@ pub enum GraphError {
 pub struct ConceptGraph {
     concepts: BTreeMap<ConceptId, Concept>,
     index: HashMap<ConceptId, NodeIndex>,
-    edges: DiGraph<ConceptId, ()>,
+    edges: StableDiGraph<ConceptId, ()>,
 }
 
 impl ConceptGraph {
@@ -55,6 +55,20 @@ impl ConceptGraph {
             self.index.insert(id.clone(), ix);
         }
         self.concepts.insert(id, concept);
+    }
+
+    /// Remove a concept that has no edges. Returns whether it was removed.
+    pub fn remove_isolated(&mut self, id: &ConceptId) -> bool {
+        let Some(&ix) = self.index.get(id) else {
+            return false;
+        };
+        if self.edges.neighbors_undirected(ix).next().is_some() {
+            return false;
+        }
+        self.edges.remove_node(ix);
+        self.index.remove(id);
+        self.concepts.remove(id);
+        true
     }
 
     /// Record that `from` needs `to`. Idempotent; refuses self-loops and cycles.

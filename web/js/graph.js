@@ -80,6 +80,8 @@ export function createGraph(container, { onSelect }) {
   cy.on("tap", "node", (e) => onSelect(e.target.id()));
   cy.on("tap", (e) => e.target === cy && onSelect(null));
 
+  let current = new Map();
+
   function render(view) {
     const wanted = new Map();
     for (const n of view.nodes) {
@@ -95,12 +97,17 @@ export function createGraph(container, { onSelect }) {
       const id = `${from}→${to}`;
       wanted.set(id, { id, source: from, target: to });
     }
+    current = wanted;
+    // Fade out what left; remove it only if a later render has not wanted it back.
     const leaving = cy.elements().filter((el) => !wanted.has(el.id()));
-    leaving.animate({ style: { opacity: 0 } }, { duration: 250, complete: () => leaving.remove() });
+    leaving.animate(
+      { style: { opacity: 0 } },
+      { duration: 250, complete: () => leaving.filter((el) => !current.has(el.id())).remove() },
+    );
     const added = [];
     for (const [id, data] of wanted) {
       const el = cy.getElementById(id);
-      if (el.nonempty()) el.data(data);
+      if (el.nonempty()) el.stop(true).removeStyle("opacity").data(data);
       else added.push({ group: data.source ? "edges" : "nodes", data });
     }
     const fresh = cy.add(added);

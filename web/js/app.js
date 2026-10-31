@@ -59,11 +59,16 @@ function select(id, center = false) {
   showCard();
 }
 
+// Answers for a goal the user has since left are dropped; on failure the
+// last good blueprint is redrawn so optimistic inputs (checkboxes) resync.
 async function run(fn) {
+  const goal = state.goal;
   try {
-    show(await fn());
+    const bp = await fn();
+    if (state.goal === goal) show(bp);
   } catch (e) {
     toast(e.message);
+    if (state.bp) show(state.bp);
   }
 }
 
@@ -82,7 +87,7 @@ async function decompose(id) {
   } finally {
     state.pending.delete(id);
     graph.pending(id, false);
-    busy(state.pending.size ? $("busy-text").textContent : "");
+    busy(state.pending.size ? `Decomposing ${state.pending.size} concept(s)…` : "");
     showCard();
   }
 }
@@ -99,13 +104,15 @@ async function learn(topic) {
   } catch (e) {
     toast(e.message);
   } finally {
-    busy("");
+    busy(state.pending.size ? `Decomposing ${state.pending.size} concept(s)…` : "");
   }
 }
 
 async function open(id) {
+  const ticket = (open.ticket = (open.ticket || 0) + 1);
   try {
     const bp = await api.blueprint(id);
+    if (ticket !== open.ticket) return;
     if (id !== state.goal) {
       graph.clear();
       state.selected = null;
@@ -119,10 +126,9 @@ async function open(id) {
 
 async function refreshTopics() {
   const list = await api.topics();
-  $("topics").innerHTML =
-    `<option value="">Your topics (${list.length})…</option>` +
-    list.map((t) => `<option value="${t.id}">${t.name.replace(/</g, "&lt;")}</option>`).join("");
-  $("topics").value = state.goal ?? "";
+  const sel = $("topics");
+  sel.replaceChildren(new Option(`Your topics (${list.length})…`, ""), ...list.map((t) => new Option(t.name, t.id)));
+  sel.value = state.goal ?? "";
 }
 
 $("learn").addEventListener("submit", (e) => {
@@ -137,7 +143,13 @@ window.addEventListener("hashchange", route);
 
 function route() {
   const m = location.hash.match(/^#\/topic\/(.+)$/);
-  if (m && decodeURIComponent(m[1]) !== state.goal) open(decodeURIComponent(m[1]));
+  let id = null;
+  try {
+    id = m && decodeURIComponent(m[1]);
+  } catch {
+    return;
+  }
+  if (id && id !== state.goal) open(id);
 }
 
 (async () => {
