@@ -12,14 +12,15 @@ collapses. If you don't get a concept, **decompose** it, and it expands another
 level, as deep as you like. The **roadmap** is the path from your known
 frontier up to the goal.
 
-The graph is drawn in the visual language of Anthropic's FLT formalisation:
+The graph is drawn in the visual language of Anthropic's
+[Formalizing Fermat's Last Theorem](https://www.anthropic.com/research/formalizing-fermats-last-theorem):
 the **blueprint** figure (tinted section panels, sans titles over monospace
-ids, orthogonal edges into a clay goal) and the **radial** growth video.
+ids, orthogonal edges into a clay goal) and the **radial** growth video,
+where the graph grows outward from the goal day by day.
 
-| Reference (study only) | axioms |
+| Blueprint layout | Radial layout with the Display panel |
 |---|---|
-| ![FLT blueprint figure](docs/media/reference/dag.png) | ![Attention, blueprint layout](docs/media/after/desktop-blueprint-attention.jpg) |
-| ![FLT video, day 11](docs/media/reference/video-day11.jpg) | ![Attention, radial layout with the Display panel](docs/media/after/desktop-radial-display.jpg) |
+| ![Attention, blueprint layout](docs/media/after/desktop-blueprint-attention.jpg) | ![Attention, radial layout with the Display panel](docs/media/after/desktop-radial-display.jpg) |
 
 | FLT blueprint | After decomposing a leaf | Phone | Before (v0) |
 |---|---|---|---|
@@ -166,12 +167,18 @@ The graph's look is modelled on Anthropic's
 [Formalizing Fermat's Last Theorem](https://www.anthropic.com/research/formalizing-fermats-last-theorem):
 its blueprint figure and formalisation video, and the
 [FLT in Lean 4 landmark graph](https://tianyipeng.github.io/fermats-last-theorem/).
-The captures in `docs/media/reference/` are kept **for study only**. They are
-not shipped with the app, and their copyright stays with their owners. The
+None of their images are included here; see them at those pages. The
 display options mirror the graph lens of [kb](https://github.com/popemkt/kb)
 without sharing its code.
+
+The blueprint layout uses [dagre](https://github.com/dagrejs/dagre) (MIT,
+vendored as `web/vendor/dagre.min.js` with `web/vendor/LICENSE.dagre`).
 
 Live mode bundles the [SpacetimeDB](https://github.com/clockworklabs/SpacetimeDB)
 TypeScript SDK 2.14.0 into `web/vendor/spacetimedb.js`. Its npm metadata says
 ISC; the repository's licence, vendored as `web/vendor/LICENSE.spacetimedb`,
 is the Business Source License 1.1.
+
+## Licence
+
+MIT; see [LICENSE](LICENSE). Vendored code keeps its own licence (above).

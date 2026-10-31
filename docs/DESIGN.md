@@ -43,8 +43,10 @@ so the UI never re-derives graph facts (`core::structure`):
 **Choice: a small SVG renderer of our own, with dagre for the layered
 layout.**
 
-The target look is Anthropic's FLT blueprint figure and video, studied from
-the captures in `docs/media/reference/`. Its features:
+The target look is the blueprint figure and video of Anthropic's
+[Formalizing Fermat's Last Theorem](https://www.anthropic.com/research/formalizing-fermats-last-theorem)
+(and the [FLT landmark graph](https://tianyipeng.github.io/fermats-last-theorem/)),
+studied on those pages; none of their images are kept here. Its features:
 
 - an ivory page;
 - tinted section panels, each with a coloured bar, a title and a subtitle;
