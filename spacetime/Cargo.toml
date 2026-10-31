@@ -1,0 +1,18 @@
+[package]
+name = "axioms-module"
+description = "axioms' SpacetimeDB module: the shared concept graph and each person's knowledge"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+spacetimedb = "=2.14.0"
+log = "0.4"
+
+# Built for wasm32 by `spacetime publish`, so not a member of the main
+# workspace (see the root Cargo.toml's `exclude`).
+[workspace]

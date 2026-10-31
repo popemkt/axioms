@@ -22,6 +22,14 @@
             clippy
             rustfmt
             rust-analyzer
+            # links the SpacetimeDB module (wasm32-unknown-unknown)
+            lld
+            # the SpacetimeDB client SDK's websocket TLS (native-tls)
+            openssl
+            pkg-config
+            # bundles the SpacetimeDB TypeScript SDK for the web UI, once
+            esbuild
+            nodejs
           ];
           # The host has unexplained hardware resets: keep builds gentle.
           CARGO_BUILD_JOBS = "4";

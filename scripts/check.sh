@@ -8,3 +8,6 @@ export CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-4}"
 cargo fmt --all -- --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace --quiet
+# The SpacetimeDB module is its own crate (wasm32), outside the workspace.
+cargo fmt --manifest-path spacetime/Cargo.toml -- --check
+cargo clippy --manifest-path spacetime/Cargo.toml --target wasm32-unknown-unknown -- -D warnings

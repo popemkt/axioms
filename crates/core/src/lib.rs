@@ -2,6 +2,7 @@
 //! merge of a decomposition into the graph. Pure: no IO, no async, no LLM.
 
 pub mod concept;
+pub mod diff;
 pub mod graph;
 pub mod library;
 pub mod merge;
@@ -10,6 +11,7 @@ mod structure;
 pub mod view;
 
 pub use concept::{Concept, ConceptId, Knowledge, normalize};
+pub use diff::{Diff, diff};
 pub use graph::{ConceptGraph, GraphError};
 pub use library::Library;
 pub use merge::{Collision, Decomposition, Merged, Proposal, Resolution};

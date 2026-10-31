@@ -1,0 +1,24 @@
+[package]
+name = "axioms-live"
+description = "axioms over SpacetimeDB: a live mirror, the decompose worker and SpacetimeStore"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+axioms-core.workspace = true
+axioms-store.workspace = true
+axioms-agent.workspace = true
+anyhow.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+spacetimedb-sdk = "=2.14.0"
+
+[[bin]]
+name = "axioms-worker"
+path = "src/bin/worker.rs"
+
+[lints]
+workspace = true

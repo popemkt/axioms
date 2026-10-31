@@ -1,0 +1,10 @@
+#!/usr/bin/env sh
+# The pinned SpacetimeDB CLI (2.14.0) with axioms' own config file, so it
+# never touches ~/.config/spacetime. Runs in the devShell, which has the
+# wasm linker `spacetime publish` needs. Install: scripts/spacetime-install.sh.
+if [ -z "${IN_NIX_SHELL:-}" ] && command -v nix >/dev/null 2>&1; then
+  exec nix develop --quiet "$(dirname "$0")/.." -c "$0" "$@"
+fi
+ST="${AXIOMS_STDB_HOME:-$HOME/.local/share/axioms/spacetime}"
+export CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-4}"
+exec "$ST/2.14.0/spacetimedb-cli" --config-path "$ST/cli.toml" "$@"
