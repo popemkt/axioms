@@ -1,6 +1,6 @@
 //! `axioms-server`: the JSON API and the static web UI on one port.
 //!
-//! - `AXIOMS_ADDR` (default `127.0.0.1:4401`)
+//! - `AXIOMS_ADDR` (default `$HOST:$PORT`, then `127.0.0.1:4401`)
 //! - `AXIOMS_DATA`: the library file (see `axioms_store::default_path`)
 //! - `AXIOMS_STORE=jsonl|kb`, `AXIOMS_KB_ROOT`: keep it in a kb store instead
 //!   (see `axioms_store::open`)
@@ -28,7 +28,11 @@ async fn main() -> anyhow::Result<()> {
             std::env::var("RUST_LOG").unwrap_or_else(|_| "info,tower_http=info".into()),
         )
         .init();
-    let addr = std::env::var("AXIOMS_ADDR").unwrap_or_else(|_| "127.0.0.1:4401".into());
+    let var = |k: &str| std::env::var(k).ok().filter(|v| !v.is_empty());
+    let addr = var("AXIOMS_ADDR").unwrap_or_else(|| {
+        let host = var("HOST").unwrap_or_else(|| "127.0.0.1".into());
+        format!("{host}:{}", var("PORT").unwrap_or_else(|| "4401".into()))
+    });
     let web = std::env::var("AXIOMS_WEB")
         .unwrap_or_else(|_| concat!(env!("CARGO_MANIFEST_DIR"), "/../../web").into());
     let state = Arc::new(app_state()?);
