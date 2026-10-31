@@ -47,3 +47,13 @@ fn fresh_ids_suffix_on_collision() {
     assert_eq!(g.fresh_id("group"), id("group-2"));
     assert_eq!(g.named("GROUP").len(), 1);
 }
+
+#[test]
+fn stating_a_topic_reuses_by_name_and_moves_it_first() {
+    let mut lib = axioms_core::Library::default();
+    let a = lib.state_topic("Fermat's Last Theorem");
+    let b = lib.state_topic("Attention");
+    assert_eq!(lib.state_topic("fermats last theorem"), a);
+    assert_eq!(lib.topics, vec![a, b]);
+    assert_eq!(lib.graph.len(), 2);
+}

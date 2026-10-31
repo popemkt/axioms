@@ -3,12 +3,14 @@
 
 pub mod concept;
 pub mod graph;
+pub mod library;
 pub mod merge;
 pub mod roadmap;
 pub mod view;
 
 pub use concept::{Concept, ConceptId, Knowledge, normalize};
 pub use graph::{ConceptGraph, GraphError};
+pub use library::Library;
 pub use merge::{Collision, Decomposition, Merged, Proposal, Resolution};
 pub use roadmap::{Roadmap, Step, roadmap};
 pub use view::{Status, View, ViewNode, view};
