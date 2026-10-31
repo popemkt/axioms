@@ -1,0 +1,3 @@
+#!/usr/bin/env sh
+# Gate: format, lint, test. Same commands as `scripts/check.sh`.
+exec "$(git rev-parse --show-toplevel)/scripts/check.sh"
