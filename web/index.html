@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>axioms</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><circle cx='8' cy='8' r='6' fill='%235b4bdb'/></svg>">
+</head>
+<body>
+  <header>
+    <a class="brand" href="#">axioms</a>
+    <form id="learn">
+      <input id="topic" name="topic" placeholder="State a topic, e.g. Fermat's Last Theorem" autocomplete="off" maxlength="200" required>
+      <button type="submit">Learn</button>
+    </form>
+    <select id="topics" aria-label="Your topics"><option value="">Your topics…</option></select>
+  </header>
+  <div id="busy" hidden><div class="bar"></div><span id="busy-text"></span></div>
+  <main>
+    <section id="stage">
+      <div id="graph"></div>
+      <div id="empty">
+        <h1>Learn anything, starting from what you know.</h1>
+        <p>State a topic. axioms breaks it into prerequisites, like a Lean blueprint from a theorem down to its axioms. Mark what you know; decompose what you don't.</p>
+        <p class="examples">Try <button data-topic="Fermat's Last Theorem">Fermat's Last Theorem</button> <button data-topic="Attention in transformers">Attention in transformers</button></p>
+      </div>
+      <ul id="legend">
+        <li><i class="goal"></i>goal</li><li><i class="unknown"></i>unknown</li>
+        <li><i class="learning"></i>learning</li><li><i class="known"></i>known (axiom)</li>
+        <li><i class="leaf"></i>not yet decomposed</li>
+      </ul>
+      <button id="fit" title="Fit to screen">⤢</button>
+    </section>
+    <aside id="side">
+      <article id="card" hidden></article>
+      <section id="roadmap"></section>
+    </aside>
+  </main>
+  <div id="toast" hidden></div>
+  <script src="vendor/cytoscape.min.js"></script>
+  <script src="vendor/cytoscape-dagre.min.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

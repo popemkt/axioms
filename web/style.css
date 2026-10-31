@@ -1,0 +1,80 @@
+:root {
+  --ink: #1d2433; --muted: #6b7489; --line: #e3e7ef; --bg: #f6f7fb; --panel: #fff;
+  --goal: #5b4bdb; --unknown: #5a7bb5; --learning: #d79a00; --known: #3f9a4a; --accent: #ff6a3d;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--ink); background: var(--bg);
+}
+* { box-sizing: border-box; }
+body { margin: 0; height: 100dvh; display: flex; flex-direction: column; }
+button { font: inherit; cursor: pointer; }
+.muted { color: var(--muted); font-weight: 400; font-size: .85em; }
+
+header { display: flex; gap: 10px; align-items: center; padding: 10px 14px; background: var(--panel); border-bottom: 1px solid var(--line); }
+.brand { font-weight: 800; color: var(--goal); text-decoration: none; letter-spacing: .02em; }
+#learn { flex: 1; display: flex; gap: 6px; min-width: 0; }
+#topic { flex: 1; min-width: 0; padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px; font: inherit; }
+#learn button { padding: 9px 16px; border: 0; border-radius: 8px; background: var(--goal); color: #fff; font-weight: 600; }
+#topics { max-width: 220px; padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: #fff; font: inherit; }
+body.busy #learn button { opacity: .5; pointer-events: none; }
+
+#busy { position: relative; padding: 6px 14px; background: #efeaff; color: var(--goal); font-size: .9em; overflow: hidden; }
+#busy .bar { position: absolute; left: 0; bottom: 0; height: 2px; width: 30%; background: var(--goal); animation: slide 1.2s ease-in-out infinite; }
+@keyframes slide { from { left: -30%; } to { left: 100%; } }
+
+main { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 400px; }
+#stage { position: relative; min-height: 0; }
+#graph { position: absolute; inset: 0; }
+#empty { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; padding: 8% 10%; pointer-events: none; }
+#empty h1 { font-size: 1.7em; margin: 0 0 .4em; }
+#empty p { max-width: 560px; color: var(--muted); line-height: 1.5; }
+#empty .examples button { pointer-events: auto; margin: 4px; padding: 6px 12px; border: 1px solid var(--goal); color: var(--goal); background: #fff; border-radius: 999px; }
+#legend { position: absolute; left: 10px; bottom: 10px; margin: 0; padding: 6px 10px; list-style: none; display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: .78em; color: var(--muted); background: #ffffffd9; border-radius: 8px; }
+#legend i { display: inline-block; width: 12px; height: 10px; border-radius: 3px; margin-right: 4px; border: 2px solid; vertical-align: -1px; }
+#legend .goal { background: var(--goal); border-color: #3d2fb0; }
+#legend .unknown { background: #fff; border-color: var(--unknown); }
+#legend .learning { background: #ffe9a8; border-color: var(--learning); }
+#legend .known { background: #cfeccf; border-color: var(--known); opacity: .7; }
+#legend .leaf { background: #fff; border: 2px dashed var(--unknown); }
+#fit { position: absolute; right: 10px; bottom: 10px; width: 36px; height: 36px; border: 1px solid var(--line); border-radius: 8px; background: #fff; font-size: 18px; }
+
+#side { min-height: 0; overflow-y: auto; background: var(--panel); border-left: 1px solid var(--line); }
+#card { margin: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 4px 18px #1d243314; background: #fff; }
+#card header { padding: 0; border: 0; gap: 6px; font-size: .8em; color: var(--muted); }
+#card h2 { margin: .3em 0; font-size: 1.15em; }
+#card .close { margin-left: auto; border: 0; background: none; font-size: 20px; color: var(--muted); }
+.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.dot.goal { background: var(--goal); } .dot.unknown { background: var(--unknown); }
+.dot.learning { background: var(--learning); } .dot.known { background: var(--known); }
+.statement { font-family: ui-serif, Georgia, serif; line-height: 1.45; }
+.check { background: #f3f6ff; padding: 8px 10px; border-radius: 8px; font-size: .92em; }
+.actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.actions button { padding: 7px 11px; border-radius: 8px; border: 1px solid var(--line); background: #fff; }
+.actions button.on { border-color: var(--goal); background: #efeaff; color: var(--goal); font-weight: 600; }
+.actions button[data-act=decompose] { border-color: var(--accent); color: var(--accent); }
+.actions button:disabled { opacity: .55; cursor: progress; }
+
+#roadmap { padding: 4px 14px 24px; }
+#roadmap h2 { font-size: 1.05em; display: flex; flex-direction: column; }
+#roadmap ol { list-style: none; margin: 0; padding: 0; }
+#roadmap li { display: flex; gap: 8px; padding: 10px 6px; border-bottom: 1px solid var(--line); cursor: pointer; border-radius: 8px; }
+#roadmap li:hover { background: #f7f8fc; }
+#roadmap li.learning { background: #fff8e1; }
+#roadmap h3 { margin: 0; font-size: .98em; }
+#roadmap .n { display: inline-block; min-width: 1.6em; color: var(--muted); font-weight: 500; }
+#roadmap .statement { margin: .3em 0; font-size: .9em; }
+#roadmap details { font-size: .88em; color: #39415a; }
+#roadmap summary { color: var(--goal); cursor: pointer; }
+.tick input { width: 18px; height: 18px; accent-color: var(--known); margin-top: 2px; }
+.builds { margin: .2em 0; font-size: .8em; color: var(--muted); }
+.chip { display: inline-block; padding: 1px 7px; border-radius: 999px; background: #cfeccf; color: #1f4d24; }
+
+#toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); max-width: 90vw; padding: 10px 14px; background: #2b1d1d; color: #fff; border-radius: 10px; font-size: .9em; z-index: 10; }
+
+@media (max-width: 760px) {
+  header { flex-wrap: wrap; }
+  .brand { order: 0; } #topics { order: 1; margin-left: auto; max-width: 55vw; } #learn { order: 2; flex-basis: 100%; }
+  main { grid-template-columns: 1fr; grid-template-rows: 58dvh auto; overflow-y: auto; }
+  #side { border-left: 0; border-top: 1px solid var(--line); overflow: visible; }
+  #card { position: fixed; left: 0; right: 0; bottom: 0; margin: 0; max-height: 52dvh; overflow-y: auto; border-radius: 16px 16px 0 0; z-index: 5; padding-bottom: calc(14px + env(safe-area-inset-bottom)); }
+  #legend { font-size: .7em; right: 54px; }
+  #empty { padding: 6%; } #empty h1 { font-size: 1.3em; }
+}
