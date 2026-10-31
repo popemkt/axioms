@@ -4,11 +4,15 @@
 import * as api from "./api.js";
 import { createGraph } from "./graph.js";
 import { createPanel } from "./panel.js";
+import { createSettings } from "./settings.js";
+import { createDisplay } from "./display.js";
 
 const $ = (id) => document.getElementById(id);
 const state = { goal: null, bp: null, nodes: new Map(), selected: null, pending: new Set(), provider: "" };
 
-const graph = createGraph($("graph"), { onSelect: select });
+const settings = createSettings();
+const graph = createGraph($("graph"), { settings, onSelect: select });
+const display = createDisplay($("display"), settings, { onReplay: () => graph.replay() });
 const panel = createPanel(
   { card: $("card"), roadmap: $("roadmap") },
   {
@@ -38,7 +42,7 @@ function show(bp) {
   state.goal = bp.view.goal;
   state.nodes = new Map(bp.view.nodes.map((n) => [n.id, n]));
   $("empty").hidden = true;
-  graph.render(bp.view);
+  graph.render(bp.view, { fit: true });
   panel.showRoadmap(bp.roadmap, state.nodes);
   if (state.selected && !state.nodes.has(state.selected)) state.selected = null;
   showCard();
@@ -55,7 +59,7 @@ function showCard() {
 
 function select(id, center = false) {
   state.selected = id;
-  if (center || !id) graph.select(id);
+  graph.select(id, center);
   showCard();
 }
 
@@ -138,6 +142,7 @@ $("learn").addEventListener("submit", (e) => {
 });
 $("topics").addEventListener("change", (e) => e.target.value && open(e.target.value));
 $("fit").addEventListener("click", () => graph.fit());
+$("display-toggle").addEventListener("click", () => display.toggle());
 document.querySelectorAll("[data-topic]").forEach((b) => b.addEventListener("click", () => learn(b.dataset.topic)));
 window.addEventListener("hashchange", route);
 

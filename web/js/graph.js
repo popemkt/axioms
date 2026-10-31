@@ -1,157 +1,66 @@
-// The blueprint graph: Cytoscape.js with a top-down dagre layout. `render`
-// diffs the new view against what is drawn, so expand and collapse animate.
+// The blueprint graph: view → drawing model → layout → SVG scene, redrawn
+// when the view or the display settings change. Rendering is our own SVG
+// (see docs/DESIGN.md → Rendering) so it can look like the FLT blueprint.
 
-const COLORS = {
-  goal: { bg: "#5b4bdb", border: "#3d2fb0", text: "#fff" },
-  unknown: { bg: "#ffffff", border: "#5a7bb5", text: "#1d2433" },
-  learning: { bg: "#ffe9a8", border: "#d79a00", text: "#3b2c00" },
-  known: { bg: "#cfeccf", border: "#3f9a4a", text: "#1f4d24" },
-};
+import { buildModel } from "./model.js";
+import { layout } from "./layout/index.js";
+import { createScene } from "./render/scene.js";
 
-const style = [
-  {
-    selector: "node",
-    style: {
-      shape: "round-rectangle",
-      width: 168,
-      height: 50,
-      label: "data(label)",
-      "text-wrap": "wrap",
-      "text-max-width": 152,
-      "text-valign": "center",
-      "font-size": 12,
-      "font-family": "system-ui, sans-serif",
-      color: (n) => COLORS[n.data("status")].text,
-      "background-color": (n) => COLORS[n.data("status")].bg,
-      "border-color": (n) => COLORS[n.data("status")].border,
-      "border-width": 2,
-      opacity: 1,
-      "transition-property": "background-color, border-color, opacity, border-width",
-      "transition-duration": 300,
+export function createGraph(container, { settings, onSelect }) {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.classList.add("scene");
+  const tip = Object.assign(document.createElement("div"), { className: "tip", hidden: true });
+  container.append(svg, tip);
+  const ui = { selected: null, pending: new Set() };
+  let view = null;
+  let model = null;
+
+  const scene = createScene(svg, {
+    onSelect,
+    onHover(id, e) {
+      scene.highlight(id);
+      const m = id && model?.byId.get(id);
+      if (!m || (m.labelled && settings.get().layout === "blueprint")) return (tip.hidden = true);
+      const r = container.getBoundingClientRect();
+      tip.innerHTML = "";
+      tip.append(Object.assign(document.createElement("b"), { textContent: m.n.name }), Object.assign(document.createElement("code"), { textContent: m.id }));
+      tip.style.left = `${e.clientX - r.left + 12}px`;
+      tip.style.top = `${e.clientY - r.top + 12}px`;
+      tip.hidden = false;
     },
-  },
-  { selector: "node[status = 'goal']", style: { "font-weight": 700, "border-width": 3, width: 190 } },
-  { selector: "node[status = 'known']", style: { opacity: 0.6 } },
-  { selector: "node[?leaf]", style: { "border-style": "dashed" } },
-  { selector: "node:selected", style: { "border-width": 4, "border-color": "#ff6a3d", opacity: 1 } },
-  { selector: "node.pending", style: { "border-color": "#ff6a3d", "border-style": "dotted" } },
-  {
-    selector: "edge",
-    style: {
-      width: 1.6,
-      "curve-style": "bezier",
-      "line-color": "#9aa8c2",
-      "target-arrow-color": "#9aa8c2",
-      "target-arrow-shape": "triangle",
-      "arrow-scale": 0.9,
-    },
-  },
-];
-
-const MIN_READABLE_ZOOM = 0.6;
-
-const layoutOptions = {
-  name: "dagre",
-  rankDir: "TB",
-  nodeSep: 24,
-  rankSep: 56,
-  animate: true,
-  animationDuration: 450,
-  animationEasing: "ease-in-out-cubic",
-  fit: true,
-  padding: 24,
-};
-
-function label(n) {
-  return n.hidden_below > 0 ? `${n.name}\n＋${n.hidden_below} below` : n.name;
-}
-
-export function createGraph(container, { onSelect }) {
-  const cy = cytoscape({
-    container,
-    style,
-    elements: [],
-    minZoom: 0.15,
-    maxZoom: 2.5,
-    wheelSensitivity: 0.3,
-    boxSelectionEnabled: false,
-    autoungrabify: true,
   });
-  cy.on("tap", "node", (e) => onSelect(e.target.id()));
-  cy.on("tap", (e) => e.target === cy && onSelect(null));
 
-  let current = new Map();
-
-  function render(view) {
-    const wanted = new Map();
-    for (const n of view.nodes) {
-      const data = {
-        id: n.id,
-        label: label(n),
-        status: n.status,
-        leaf: !n.decomposed && n.status !== "known",
-      };
-      wanted.set(n.id, data);
-    }
-    for (const [from, to] of view.edges) {
-      const id = `${from}→${to}`;
-      wanted.set(id, { id, source: from, target: to });
-    }
-    current = wanted;
-    // Fade out what left; remove it only if a later render has not wanted it back.
-    const leaving = cy.elements().filter((el) => !wanted.has(el.id()));
-    leaving.animate(
-      { style: { opacity: 0 } },
-      { duration: 250, complete: () => leaving.filter((el) => !current.has(el.id())).remove() },
-    );
-    const added = [];
-    for (const [id, data] of wanted) {
-      const el = cy.getElementById(id);
-      if (el.nonempty()) el.stop(true).removeStyle("opacity").data(data);
-      else added.push({ group: data.source ? "edges" : "nodes", data });
-    }
-    const fresh = cy.add(added);
-    // New nodes grow out of the concept that needs them.
-    fresh.nodes().forEach((n) => {
-      const parent = n.incomers("node").first();
-      if (parent.nonempty()) n.position({ ...parent.position() });
-    });
-    fresh.style("opacity", 0);
-    cy.elements()
-      .difference(leaving)
-      .layout({ ...layoutOptions, stop: readable })
-      .run();
-    fresh.animate({ style: { opacity: 1 } }, { duration: 450 });
-    setTimeout(() => fresh.removeStyle("opacity"), 500);
+  function render(opts = {}) {
+    if (!view) return;
+    const s = settings.get();
+    model = buildModel(view, s, ui);
+    scene.draw(model, layout(s.layout, model), s, ui, opts);
   }
 
-  // A fitted wide graph can be too small to read on a phone: zoom in to a
-  // readable floor, keeping the goal at the top centre. Pan to see the rest.
-  function readable() {
-    if (cy.zoom() >= MIN_READABLE_ZOOM) return;
-    const goal = cy.nodes("[status = 'goal']").first();
-    if (goal.empty()) return;
-    const p = goal.position();
-    cy.animate(
-      { zoom: MIN_READABLE_ZOOM, pan: { x: cy.width() / 2 - p.x * MIN_READABLE_ZOOM, y: 40 - p.y * MIN_READABLE_ZOOM + 24 } },
-      { duration: 300 },
-    );
-  }
+  settings.onChange(() => render());
 
   return {
-    cy,
-    render,
-    clear: () => cy.elements().remove(),
-    fit: () => cy.animate({ fit: { eles: cy.elements(), padding: 24 } }, { duration: 350 }),
-    select(id) {
-      cy.$(":selected").unselect();
+    render(next, opts) {
+      view = next;
+      render(opts);
+    },
+    replay: () => render({ fresh: true }),
+    clear() {
+      view = null;
+      scene.clear();
+    },
+    fit: () => scene.fit(),
+    select(id, center = false) {
+      ui.selected = id;
+      svg.querySelectorAll(".node.selected").forEach((g) => g.classList.remove("selected"));
       if (!id) return;
-      const n = cy.getElementById(id);
-      n.select();
-      cy.animate({ center: { eles: n } }, { duration: 300 });
+      scene.nodeEl(id)?.classList.add("selected");
+      if (center) scene.center(id);
     },
     pending(id, on) {
-      cy.getElementById(id).toggleClass("pending", on);
+      if (on) ui.pending.add(id);
+      else ui.pending.delete(id);
+      scene.nodeEl(id)?.classList.toggle("pending", on);
     },
   };
 }

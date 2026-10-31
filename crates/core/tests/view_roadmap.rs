@@ -83,7 +83,25 @@ fn view_carries_depth_sections_dependants_and_implied_edges() {
     assert_eq!(n("goal").section, None);
     assert_eq!(n("x").section, Some(id("x")));
     assert_eq!(n("b").section, Some(id("y")));
-    assert_eq!(n("a").section, None, "a is shared by x and y");
+    assert_eq!(
+        n("a").section,
+        Some(id("x")),
+        "a ties x and y, both of size 1: by id"
+    );
     assert_eq!(n("a").dependants, 2);
     assert_eq!(v.implied, vec![(id("y"), id("deep"))]);
+    assert_eq!(
+        n("deep").section,
+        Some(id("y")),
+        "deep is nearer y (via the shortcut)"
+    );
+}
+
+#[test]
+fn section_roots_come_from_the_transitive_reduction() {
+    // goal → {x, a}; x → a: a is implied for the goal, so only x is a section.
+    let g = graph(&[("goal", "x"), ("goal", "a"), ("x", "a")]);
+    let v = view(&g, &id("goal")).unwrap();
+    let a = v.nodes.iter().find(|n| n.concept.id == id("a")).unwrap();
+    assert_eq!(a.section, Some(id("x")));
 }

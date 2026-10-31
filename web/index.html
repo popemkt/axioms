@@ -27,10 +27,14 @@
       </div>
       <ul id="legend">
         <li><i class="goal"></i>goal</li><li><i class="unknown"></i>unknown</li>
-        <li><i class="learning"></i>learning</li><li><i class="known"></i>known (axiom)</li>
-        <li><i class="leaf"></i>not yet decomposed</li>
+        <li><i class="root"></i>section</li><li><i class="learning"></i>learning</li>
+        <li><i class="known"></i>known (axiom)</li><li><i class="leaf"></i>not yet decomposed</li>
       </ul>
-      <button id="fit" title="Fit to screen">⤢</button>
+      <div id="tools">
+        <button id="display-toggle" title="Display options">Display</button>
+        <button id="fit" title="Fit to screen">⤢</button>
+      </div>
+      <section id="display" hidden></section>
     </section>
     <aside id="side">
       <article id="card" hidden></article>
@@ -38,8 +42,7 @@
     </aside>
   </main>
   <div id="toast" hidden></div>
-  <script src="vendor/cytoscape.min.js"></script>
-  <script src="vendor/cytoscape-dagre.min.js"></script>
+  <script src="vendor/dagre.min.js"></script>
   <script type="module" src="js/app.js"></script>
 </body>
 </html>
