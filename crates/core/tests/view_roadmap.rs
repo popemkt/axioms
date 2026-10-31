@@ -43,9 +43,9 @@ fn known_concepts_collapse_what_is_below_them() {
 }
 
 #[test]
-fn roadmap_goes_from_leaves_to_goal() {
+fn roadmap_finishes_each_branch_before_the_next() {
     let g = sample();
-    assert_eq!(order(&g), ["b", "deep", "a", "x", "y", "goal"]);
+    assert_eq!(order(&g), ["deep", "a", "x", "b", "y", "goal"]);
 }
 
 #[test]
@@ -56,7 +56,7 @@ fn roadmap_skips_known_and_records_what_steps_build_on() {
     let v = view(&g, &id("goal")).unwrap();
     let r = roadmap(&v);
     let ids: Vec<_> = r.steps.iter().map(|s| s.id.0.as_str()).collect();
-    assert_eq!(ids, ["b", "x", "y", "goal"]);
+    assert_eq!(ids, ["x", "b", "y", "goal"]);
     let y = &r.steps[2];
     assert_eq!(y.builds_on, vec![id("a")]);
     assert_eq!(y.after, vec![id("b")]);

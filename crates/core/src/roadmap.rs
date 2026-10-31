@@ -1,10 +1,12 @@
 //! The roadmap: the order to learn the unknown part of a view, from your known
 //! frontier up to the goal.
 //!
-//! It is derived from the [`View`], never stored: a topological order over the
-//! drawn concepts that are not yet known, prerequisites first. Ties break by
-//! height (how far a concept sits above its unknown leaves), then by name, so
-//! the order is deterministic and starts with what you can learn right now.
+//! It is derived from the [`View`], never stored. The order is a depth-first
+//! post-order from the goal over concepts not yet known: each concept comes
+//! right after its own unknown prerequisites, so a branch is finished before
+//! the next begins (a valid topological order that reads as a path, not as
+//! layers). Siblings go simplest first: by height (how far a concept sits
+//! above its unknown leaves), then by name.
 
 use crate::concept::{ConceptId, Knowledge};
 use crate::view::{View, ViewNode};
@@ -31,91 +33,87 @@ pub struct Roadmap {
     pub steps: Vec<Step>,
 }
 
-pub fn roadmap(view: &View) -> Roadmap {
-    let nodes: BTreeMap<&ConceptId, &ViewNode> =
-        view.nodes.iter().map(|n| (&n.concept.id, n)).collect();
-    let unknown = |id: &ConceptId| {
-        nodes
+struct Walk<'v> {
+    nodes: BTreeMap<&'v ConceptId, &'v ViewNode>,
+    needs: BTreeMap<&'v ConceptId, Vec<&'v ConceptId>>,
+    heights: BTreeMap<&'v ConceptId, usize>,
+    placed: BTreeSet<&'v ConceptId>,
+    steps: Vec<Step>,
+}
+
+impl<'v> Walk<'v> {
+    fn unknown(&self, id: &ConceptId) -> bool {
+        self.nodes
             .get(id)
             .is_some_and(|n| n.concept.knowledge != Knowledge::Known)
-    };
-    let mut needs: BTreeMap<&ConceptId, Vec<&ConceptId>> = BTreeMap::new();
-    for (from, to) in &view.edges {
-        needs.entry(from).or_default().push(to);
     }
-    let todo: Vec<&ConceptId> = nodes.keys().copied().filter(|id| unknown(id)).collect();
-    let height = heights(&todo, &needs, &unknown);
 
-    let mut placed: BTreeSet<&ConceptId> = BTreeSet::new();
-    let mut steps = Vec::with_capacity(todo.len());
-    let pending_of = |id: &ConceptId, placed: &BTreeSet<&ConceptId>| {
-        needs.get(id).map_or(0, |ns| {
-            ns.iter()
-                .filter(|n| unknown(n) && !placed.contains(*n))
-                .count()
-        })
-    };
-    while steps.len() < todo.len() {
-        // The DAG guarantees at least one ready concept each round.
-        let next = todo
-            .iter()
-            .filter(|id| !placed.contains(*id) && pending_of(id, &placed) == 0)
-            .min_by_key(|id| (height[*id], &nodes[*id].concept.name))
-            .copied()
-            .expect("view edges are acyclic");
-        placed.insert(next);
-        let node = nodes[next];
-        let (after, builds_on): (Vec<&ConceptId>, Vec<&ConceptId>) = needs
-            .get(next)
+    fn needs_of(&self, id: &ConceptId) -> Vec<&'v ConceptId> {
+        self.needs.get(id).cloned().unwrap_or_default()
+    }
+
+    fn height(&mut self, id: &'v ConceptId) -> usize {
+        if let Some(&h) = self.heights.get(id) {
+            return h;
+        }
+        let kids: Vec<_> = self
+            .needs_of(id)
             .into_iter()
-            .flatten()
-            .partition(|n| unknown(n));
-        steps.push(Step {
-            id: next.clone(),
-            name: node.concept.name.clone(),
-            statement: node.concept.statement.clone(),
-            explanation: node.concept.explanation.clone(),
-            check: node.concept.check.clone(),
-            knowledge: node.concept.knowledge,
+            .filter(|n| self.unknown(n))
+            .collect();
+        let h = kids
+            .into_iter()
+            .map(|n| 1 + self.height(n))
+            .max()
+            .unwrap_or(0);
+        self.heights.insert(id, h);
+        h
+    }
+
+    fn visit(&mut self, id: &'v ConceptId) {
+        if !self.unknown(id) || !self.placed.insert(id) {
+            return;
+        }
+        let (mut after, builds_on): (Vec<_>, Vec<_>) =
+            self.needs_of(id).into_iter().partition(|n| self.unknown(n));
+        let mut keyed: Vec<_> = after
+            .iter()
+            .map(|n| (self.height(n), &self.nodes[*n].concept.name, *n))
+            .collect();
+        keyed.sort();
+        after = keyed.into_iter().map(|(_, _, n)| n).collect();
+        for n in &after {
+            self.visit(n);
+        }
+        let c = &self.nodes[id].concept;
+        self.steps.push(Step {
+            id: id.clone(),
+            name: c.name.clone(),
+            statement: c.statement.clone(),
+            explanation: c.explanation.clone(),
+            check: c.check.clone(),
+            knowledge: c.knowledge,
             builds_on: builds_on.into_iter().cloned().collect(),
             after: after.into_iter().cloned().collect(),
         });
     }
-    Roadmap {
-        goal: view.goal.clone(),
-        steps,
-    }
 }
 
-/// Longest path from each unknown concept down to an unknown leaf.
-fn heights<'v>(
-    todo: &[&'v ConceptId],
-    needs: &BTreeMap<&'v ConceptId, Vec<&'v ConceptId>>,
-    unknown: &impl Fn(&ConceptId) -> bool,
-) -> BTreeMap<&'v ConceptId, usize> {
-    fn go<'v>(
-        id: &'v ConceptId,
-        needs: &BTreeMap<&'v ConceptId, Vec<&'v ConceptId>>,
-        unknown: &impl Fn(&ConceptId) -> bool,
-        memo: &mut BTreeMap<&'v ConceptId, usize>,
-    ) -> usize {
-        if let Some(&h) = memo.get(id) {
-            return h;
-        }
-        let h = needs
-            .get(id)
-            .into_iter()
-            .flatten()
-            .filter(|n| unknown(n))
-            .map(|n| 1 + go(n, needs, unknown, memo))
-            .max()
-            .unwrap_or(0);
-        memo.insert(id, h);
-        h
+pub fn roadmap(view: &View) -> Roadmap {
+    let mut needs: BTreeMap<&ConceptId, Vec<&ConceptId>> = BTreeMap::new();
+    for (from, to) in &view.edges {
+        needs.entry(from).or_default().push(to);
     }
-    let mut memo = BTreeMap::new();
-    for id in todo {
-        go(id, needs, unknown, &mut memo);
+    let mut walk = Walk {
+        nodes: view.nodes.iter().map(|n| (&n.concept.id, n)).collect(),
+        needs,
+        heights: BTreeMap::new(),
+        placed: BTreeSet::new(),
+        steps: Vec::new(),
+    };
+    walk.visit(&view.goal);
+    Roadmap {
+        goal: view.goal.clone(),
+        steps: walk.steps,
     }
-    memo
 }
