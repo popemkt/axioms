@@ -186,19 +186,91 @@ per line:
 - A save keeps each node's `createdAt`, and moves `updatedAt` only when its
   content changed.
 
-## Future link to kb (owner to decide)
+## kb integration
 
-Nothing couples axioms to kb today. The file is merely *shaped* like kb's
-store. There are three options:
+`AXIOMS_STORE=kb AXIOMS_KB_ROOT=<dir holding .kb/>` keeps the library in a
+kb store instead of the JSONL file. `KbStore` (`crates/store/src/kb/`) is a
+second implementation of `Store` behind the same codec, so both stores write
+the same nodes. There is no shared code with kb and no rewrite of it.
 
-1. **Stay separate.** Keep the shape for familiarity only.
-2. **Export/import.** A `kb` command reads or writes `ax.*` nodes into a kb
-   store. Concept ids would need to become ULIDs, keeping the slug as a prop
-   or alias.
-3. **kb as the store.** A `KbStore` implements `Store` over kb's CLI or MCP.
-   Axioms become kb nodes the owner can link from notes, and the blueprint
-   becomes another kb projection (a graph view over `ax.f.needs`).
+**Interface.** `KbStore` talks to `kb mcp`, kb's MCP server on stdio. kb's
+DESIGN names one action registry served by the CLI, MCP and HTTP alike, so
+these are the same actions as `kb action-invoke`. A session is one process
+per load or save: dozens of calls cost one start-up (about 0.5 s) instead of
+one each, and nothing stays running. axioms never reads `.kb/` files, so a
+sqlite-backed kb works the same. `AXIOMS_KB_BIN` names the binary (default
+`kb`).
 
-Option 3 fits kb's "everything is a node; views are projections" best. It is
-one new `Store` implementation, because the codec is the only place that
-knows the node shape.
+**Mapping.**
+
+| axioms | kb |
+| --- | --- |
+| concept | a node with id = the concept slug, text = its name, tagged `#concept` (`ax.tag.concept`, `sys.f.type`) |
+| statement, explanation, check | text fields `ax.f.statement`, `ax.f.explanation`, `ax.f.check` (`sys.ft.text`, cardinality one) |
+| needs edge | ref prop on the field `ax.f.needs` (`sys.ft.ref`, `sys.f.targetTag` → `#concept`) |
+| knowledge state | ref prop on `ax.f.knowledge` (cardinality one) to one of its option children `unknown`/`learning`/`known` |
+| topics | the ordered children of an `ax.topics` node |
+
+The `#concept` tag templates all five fields, so kb shows and offers them on
+every concept. Props are keyed by field node, as kb keys them. The
+roadmap and view are still derived and never stored.
+
+**Writes.** A save diffs the codec's nodes against what kb holds and
+writes only the difference. It runs in four passes, so every ref has its
+target before it is written:
+
+1. **Mint.** Missing fields are minted with `field.define` and the tag with
+   `tag.define`, with explicit `ax.*` ids. Missing concepts are minted with
+   `node.add`.
+2. **Place.** Children are put in order with `node.update` (parent and
+   position).
+3. **Props.** Props are set and unset with `node.update`.
+4. **Delete.** Concepts that axioms no longer has are removed with
+   `node.delete`, reparenting their children.
+
+kb validates every write: a value must fit its field's type, and a ref must
+name a stored node.
+
+**Shared ownership.** axioms owns only its `ax.*` fields on a concept. It
+only ever adds to `sys.f.type` and `sys.f.fields`, and it ignores children it
+did not place. A person can tag a concept, give it their own fields, or
+nest notes under it, and saves keep all of that.
+
+**Seeing it in kb.** Concepts show in the outline with their fields. To see
+the blueprint in kb's graph view, tick Graph options → Relationships →
+`needs`. `kb query` reads the DAG directly:
+
+```sh
+kb --root "$AXIOMS_KB_ROOT" query \
+  '[:find ?from ?to :where [?a :f/ax.f.needs ?b] [?a :node/text ?from] [?b :node/text ?to]]'
+```
+
+**Known limits.**
+
+- **Last writer wins on axioms' fields.** The server loads the library once
+  at start. If a concept's `ax.*` fields are edited in kb while the server
+  runs, the next save puts axioms' copy back. Edits made in kb are picked
+  up on the next start.
+- **`targetTag` is not enforced.** kb refuses a dangling `needs` ref, but
+  not one that points at a non-concept node. kb uses `targetTag` to scope
+  its pickers, not to check writes. On load, axioms skips a `needs` edge
+  whose target is not a concept rather than failing.
+- **Ids are slugs, not ULIDs.** That is legal in kb. A field the person
+  already has with the same name (say "statement") is not reused: axioms
+  mints its own with an `ax.*` id, so the two never mix.
+- **Every save is a full diff.** Each save reads all concepts first. That
+  is fine at hundreds of concepts; at many thousands it would want
+  `graph.changes`.
+- **kb records opened roots.** `kb init` and `kb ui` add the root to the
+  person's location list in their home store. `kb mcp`, which axioms uses,
+  does not. Tests and demos set `KB_HOME` to a throwaway home.
+  `KbStore::with_home` does the same, so they never touch the person's own
+  kb.
+
+Tests: `crates/store/src/kb/plan.rs` tests the diff without kb. Run
+`cargo test -p axioms-store -- --ignored` for the round trip through a real
+kb in a temp store and temp home.
+
+| kb outline: a concept with its fields | kb graph: the `needs` relation | axioms, reloaded from kb |
+| --- | --- | --- |
+| ![](media/kb/kb-concept-fields.jpg) | ![](media/kb/kb-graph-needs.jpg) | ![](media/kb/axioms-from-kb.jpg) |

@@ -66,8 +66,13 @@ pub fn from_nodes(nodes: &[KbNode]) -> anyhow::Result<Library> {
         });
     }
     for n in &concepts {
+        // A need on a node that is not a concept (a person's edit in a shared
+        // kb store) is not an edge axioms can draw; it is skipped, not fatal.
         for need in n.refs(NEEDS) {
             let (from, to) = (ConceptId(n.id.clone()), ConceptId(need.to_owned()));
+            if library.graph.get(&to).is_none() {
+                continue;
+            }
             library
                 .graph
                 .add_need(&from, &to)

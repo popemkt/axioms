@@ -1,6 +1,6 @@
 [package]
 name = "axioms-store"
-description = "Persistence for the library as kb-style JSONL nodes"
+description = "Persistence for the library as kb nodes: a JSONL file or a kb store"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

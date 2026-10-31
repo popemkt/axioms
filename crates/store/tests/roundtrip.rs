@@ -97,3 +97,15 @@ fn jsonl_keeps_nodes_it_does_not_own() {
     assert_eq!(text.matches("01JNOTE").count(), 1);
     assert_eq!(store.load().unwrap().graph.len(), 2);
 }
+
+#[test]
+fn a_need_on_a_non_concept_is_skipped() {
+    let mut nodes = axioms_store::to_nodes(&sample());
+    let goal = nodes.iter_mut().find(|n| n.id == "attention").unwrap();
+    goal.props
+        .entry(schema::NEEDS.into())
+        .or_default()
+        .push(axioms_store::node::PropValue::Ref("someones-note".into()));
+    let lib = axioms_store::from_nodes(&nodes).unwrap();
+    assert_same(&sample(), &lib);
+}

@@ -91,6 +91,11 @@ survives, but the process does not.
 
 Data: `~/.local/share/axioms/nodes.jsonl` (override with `AXIOMS_DATA`).
 
+To keep the library in a [kb](https://github.com/popemkt/kb) store instead,
+run with `AXIOMS_STORE=kb AXIOMS_KB_ROOT=<dir holding .kb/>`. Concepts become
+`#concept` nodes with typed fields, and `needs` becomes a ref field. See
+[DESIGN.md → kb integration](docs/DESIGN.md#kb-integration).
+
 ### Model provider
 
 | `AXIOMS_PROVIDER` | What | Settings |
